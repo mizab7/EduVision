@@ -1,81 +1,124 @@
 """
-Face detection module using MediaPipe 1.0 Tasks API.
+Face detection module for EduVision AI.
+Uses OpenCV YuNet (high-performance, native ONNX face detector) with multi-face support.
 """
 
+import os
+from pathlib import Path
+from typing import List, Dict, Any, Optional
+import urllib.request
 import cv2
 import numpy as np
-from typing import List, Dict, Any, Optional
-
-try:
-    import mediapipe as mp
-    from mediapipe.tasks.python import vision
-except ImportError:
-    mp = None
-    vision = None
 
 
 class FaceDetector:
     """
-    Detects faces in an image using MediaPipe Tasks API.
+    Detects faces in frames using OpenCV's DNN YuNet model.
     """
-    def __init__(self, model_name: str = 'retinaface', confidence_threshold: float = 0.5):
+    YUNET_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
+
+    def __init__(self, model_name: str = "yunet", confidence_threshold: float = 0.5):
         self.model_name = model_name
         self.confidence_threshold = confidence_threshold
         
-        if self.model_name in ['mediapipe', 'retinaface']:
-            if mp is None or vision is None:
-                raise ImportError("MediaPipe is required for face detection.")
-            options = vision.FaceDetectorOptions(
-                min_detection_confidence=self.confidence_threshold,
-                num_faces=10
-            )
-            self.detector = vision.FaceDetector.create_from_options(options)
-        else:
-            raise ValueError(f"Unsupported model: {self.model_name}")
+        project_root = Path(__file__).resolve().parent.parent.parent
+        self.models_dir = project_root / "models"
+        self.models_dir.mkdir(parents=True, exist_ok=True)
+        self.model_path = self.models_dir / "face_detection_yunet_2023mar.onnx"
+        
+        self._ensure_model_exists()
+        
+        # Initialize detector with default resolution
+        self.detector = cv2.FaceDetectorYN.create(
+            str(self.model_path),
+            "",
+            (320, 320),
+            score_threshold=self.confidence_threshold,
+            nms_threshold=0.3,
+            top_k=5000
+        )
+        self.current_input_size = (320, 320)
+
+    def _ensure_model_exists(self):
+        """Downloads YuNet weights if not present."""
+        if not self.model_path.exists():
+            print(f"Downloading YuNet face detection weights to {self.model_path}...")
+            urllib.request.urlretrieve(self.YUNET_URL, str(self.model_path))
 
     def detect_faces(self, frame: np.ndarray) -> List[Dict[str, Any]]:
-        """Detects faces and returns bounding boxes and landmarks."""
+        """
+        Detects faces in the given BGR frame.
+        
+        Returns:
+            List of dicts: [
+                {
+                    'bbox': [x1, y1, x2, y2],
+                    'confidence': float,
+                    'landmarks': {
+                        'right_eye': (x, y),
+                        'left_eye': (x, y),
+                        'nose_tip': (x, y),
+                        'right_mouth': (x, y),
+                        'left_mouth': (x, y)
+                    }
+                }
+            ]
+        """
+        if frame is None or frame.size == 0:
+            return []
+
+        h, w = frame.shape[:2]
+        if (w, h) != self.current_input_size:
+            self.detector.setInputSize((w, h))
+            self.current_input_size = (w, h)
+
+        _, faces = self.detector.detect(frame)
         results = []
-        if self.model_name in ['mediapipe', 'retinaface']:
-            image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image_rgb)
-            
-            out = self.detector.detect(mp_image)
-            
-            if out.detections:
-                h, w, _ = frame.shape
-                for detection in out.detections:
-                    bbox = detection.bounding_box
-                    x1 = bbox.origin_x
-                    y1 = bbox.origin_y
-                    x2 = x1 + bbox.width
-                    y2 = y1 + bbox.height
-                    
-                    confidence = detection.categories[0].score if detection.categories else 0.0
-                    
-                    landmarks = {}
-                    if hasattr(detection, 'keypoints') and detection.keypoints:
-                        for i, kp in enumerate(detection.keypoints):
-                            landmarks[f'kp_{i}'] = (int(kp.x * w), int(kp.y * h))
-                            
-                    results.append({
-                        'bbox': [max(0, x1), max(0, y1), min(w, x2), min(h, y2)],
-                        'confidence': float(confidence),
-                        'landmarks': landmarks
-                    })
+
+        if faces is not None:
+            for face in faces:
+                # face format: [x, y, w, h, x_re, y_re, x_le, y_le, x_nt, y_nt, x_rc, y_rc, x_lc, y_lc, score]
+                x, y, bw, bh = face[0:4]
+                score = float(face[-1])
+                
+                x1 = max(0, int(x))
+                y1 = max(0, int(y))
+                x2 = min(w, int(x + bw))
+                y2 = min(h, int(y + bh))
+                
+                landmarks = {
+                    "right_eye": (int(face[4]), int(face[5])),
+                    "left_eye": (int(face[6]), int(face[7])),
+                    "nose_tip": (int(face[8]), int(face[9])),
+                    "right_mouth": (int(face[10]), int(face[11])),
+                    "left_mouth": (int(face[12]), int(face[13])),
+                }
+                
+                results.append({
+                    "bbox": [x1, y1, x2, y2],
+                    "confidence": score,
+                    "landmarks": landmarks
+                })
+
         return results
 
     def draw_detections(self, frame: np.ndarray, detections: List[Dict[str, Any]]) -> np.ndarray:
-        """Draws bounding boxes and landmarks on the frame."""
+        """Draws bounding boxes and facial landmarks on a copy of the frame."""
         out_frame = frame.copy()
         for det in detections:
-            bbox = det['bbox']
+            bbox = det["bbox"]
+            conf = det["confidence"]
+            
+            # Bounding box
             cv2.rectangle(out_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
             
-            for name, pt in det['landmarks'].items():
-                cv2.circle(out_frame, pt, 2, (0, 0, 255), -1)
+            # Landmarks
+            for _, pt in det["landmarks"].items():
+                cv2.circle(out_frame, pt, 3, (0, 0, 255), -1)
                 
-            conf = det['confidence']
-            cv2.putText(out_frame, f"{conf:.2f}", (bbox[0], bbox[1] - 10), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+            # Score label
+            label = f"Face: {conf:.2f}"
+            cv2.putText(out_frame, label, (bbox[0], max(15, bbox[1] - 8)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
         return out_frame
