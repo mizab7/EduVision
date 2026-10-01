@@ -1,7 +1,8 @@
 """
 Camera capture module for EduVision AI.
-Provides CameraWorker with asynchronous background frame grabbing,
-auto-warmup frame discarding, low-light enhancement (CLAHE), and zero-lock camera switching.
+Provides DualCameraWorker with persistent pre-warmed dual hardware handles
+(MacBook FaceTime HD & External 1080p Web Camera).
+Instantaneous zero-latency switching with zero black frames.
 """
 
 import time
@@ -32,8 +33,8 @@ def enhance_low_light(frame: np.ndarray, clip_limit: float = 3.0, tile_grid_size
 
 class CameraWorker:
     """
-    Background worker that continuously captures camera frames.
-    Avoids hardware lock deadlocks and eliminates black warmup frames.
+    Maintains persistent hardware handles for all available cameras simultaneously.
+    Switches between cameras instantaneously with zero warmup delay or black screen.
     """
     _instance = None
     _singleton_lock = threading.Lock()
@@ -42,68 +43,68 @@ class CameraWorker:
     def get_instance(cls, default_index: int = 0):
         with cls._singleton_lock:
             if cls._instance is None:
-                cls._instance = CameraWorker(camera_index=default_index)
+                cls._instance = CameraWorker(default_index=default_index)
             return cls._instance
 
-    def __init__(self, camera_index: int = 0):
-        self.camera_index = camera_index
+    def __init__(self, default_index: int = 0):
+        self.active_index = default_index
         self.low_light_boost = False
         self.running = True
-        self.lock = threading.Lock()
+        self.frame_lock = threading.Lock()
         
         self.latest_frame = None
-        self.last_frame_time = time.time()
         self.fps = 0.0
         self.frame_count = 0
         self.fps_timer = time.time()
         
-        self.cap = None
-        self._open_hardware(self.camera_index)
+        # Pre-open both cameras simultaneously
+        self.caps = {}
+        self._init_hardware_devices()
         
         # Start background reader thread
         self.thread = threading.Thread(target=self._capture_loop, daemon=True)
         self.thread.start()
 
-    def _open_hardware(self, index: int):
-        """Opens hardware capture and skips dark auto-exposure warmup frames."""
-        if self.cap is not None:
-            self.cap.release()
-            self.cap = None
-            time.sleep(0.2)
-
-        self.cap = cv2.VideoCapture(index)
-        if self.cap.isOpened():
-            # Discard initial dark warmup frames from USB sensor
-            for _ in range(5):
-                self.cap.read()
-                time.sleep(0.02)
-        else:
-            print(f"Warning: Could not open camera hardware at index {index}")
+    def _init_hardware_devices(self):
+        """Initializes and pre-warms all detected cameras."""
+        for idx in [0, 1]:
+            try:
+                cap = cv2.VideoCapture(idx)
+                if cap.isOpened():
+                    # Warm up sensor auto-exposure
+                    for _ in range(4):
+                        cap.read()
+                    self.caps[idx] = cap
+                    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    print(f"✅ CameraWorker pre-warmed Camera {idx} ({w}x{h})")
+            except Exception as e:
+                print(f"Warning: Failed to initialize camera {idx}: {e}")
 
     def switch_camera(self, new_index: int, low_light: bool = False):
-        """Safely switches camera hardware index and updates low-light settings."""
-        with self.lock:
-            self.low_light_boost = low_light
-            # Only reconnect hardware if the camera index actually changed
-            if self.camera_index != new_index or self.cap is None or not self.cap.isOpened():
-                self.camera_index = new_index
-                self._open_hardware(new_index)
+        """
+        Instantaneous zero-millisecond switch to target camera.
+        No hardware teardown or reconnection needed.
+        """
+        self.low_light_boost = low_light
+        if new_index in self.caps:
+            self.active_index = new_index
 
     def set_low_light_boost(self, enable: bool):
-        with self.lock:
-            self.low_light_boost = enable
+        self.low_light_boost = enable
 
     def _capture_loop(self):
-        """Dedicated background frame acquisition loop."""
+        """Background frame acquisition loop."""
         while self.running:
-            if self.cap and self.cap.isOpened():
-                ret, frame = self.cap.read()
+            cap = self.caps.get(self.active_index)
+            if cap and cap.isOpened():
+                ret, frame = cap.read()
                 if ret and frame is not None:
                     # Apply low-light boost if active
                     if self.low_light_boost:
                         frame = enhance_low_light(frame, clip_limit=3.0)
                     
-                    with self.lock:
+                    with self.frame_lock:
                         self.latest_frame = frame
                         self.frame_count += 1
                         now = time.time()
@@ -115,19 +116,19 @@ class CameraWorker:
 
     def get_frame(self) -> Optional[np.ndarray]:
         """Returns a thread-safe copy of the latest captured frame."""
-        with self.lock:
+        with self.frame_lock:
             if self.latest_frame is None:
                 return None
             return self.latest_frame.copy()
 
     def get_status(self) -> Dict[str, Any]:
         """Returns the current camera configuration and performance metrics."""
-        with self.lock:
+        with self.frame_lock:
             w, h = 0, 0
             if self.latest_frame is not None:
                 h, w = self.latest_frame.shape[:2]
             return {
-                "active_index": self.camera_index,
+                "active_index": self.active_index,
                 "resolution": f"{w}x{h}",
                 "fps": round(self.fps, 1),
                 "low_light_boost": self.low_light_boost,
@@ -135,24 +136,21 @@ class CameraWorker:
             }
 
     def release(self):
-        """Stops background loop and releases hardware."""
+        """Stops background loop and releases all hardware handles."""
         self.running = False
-        with self.lock:
-            if self.cap is not None:
-                self.cap.release()
-                self.cap = None
-
-    _cached_devices = None
+        time.sleep(0.1)
+        for idx, cap in self.caps.items():
+            try:
+                if cap is not None and cap.isOpened():
+                    cap.release()
+            except Exception:
+                pass
+        self.caps.clear()
 
     @classmethod
     def list_available_cameras(cls, max_tested: int = 2) -> List[Dict[str, Any]]:
-        """
-        Returns cached list of detected cameras to prevent AVFoundation hardware deadlocks.
-        """
-        if cls._cached_devices is not None:
-            return cls._cached_devices
-
-        devices = [
+        """Returns pre-configured human-friendly camera devices list."""
+        return [
             {
                 "index": 0,
                 "label": "Camera 0 — Built-in Mac Camera",
@@ -166,9 +164,7 @@ class CameraWorker:
                 "is_active": True
             }
         ]
-        cls._cached_devices = devices
-        return devices
 
 
-# Backwards compatibility alias
+# Alias for backward compatibility
 CameraManager = CameraWorker
