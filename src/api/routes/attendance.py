@@ -10,6 +10,7 @@ from src.database.models import AttendanceRecord, Student, Session as ClassSessi
 from src.face_recognition.detector import FaceDetector
 from src.face_recognition.recognizer import FaceRecognizer
 from src.face_recognition.enrollment import EnrollmentManager
+from src.anti_spoofing.liveness import AntiSpoofDetector
 from src.camera.capture import CameraManager
 
 router = APIRouter()
@@ -17,6 +18,7 @@ router = APIRouter()
 detector = FaceDetector()
 recognizer = FaceRecognizer()
 enrollment_mgr = EnrollmentManager()
+anti_spoof = AntiSpoofDetector(confidence_threshold=0.60)
 
 
 class AttendanceRecordResponse(BaseModel):
@@ -92,6 +94,7 @@ def mark_live_attendance(session_id: Optional[int] = None, db: DBSession = Depen
     # 5. Recognize faces and mark attendance
     marked_students = []
     already_marked = []
+    rejected_spoofs = []
 
     for det in detections:
         bbox = det["bbox"]
@@ -108,6 +111,34 @@ def mark_live_attendance(session_id: Optional[int] = None, db: DBSession = Depen
             if matched_id is not None:
                 student = db.query(Student).filter(Student.id == matched_id).first()
                 if not student:
+                    continue
+
+                # 4. Liveness & Anti-Spoofing check
+                liveness = anti_spoof.analyze_liveness(frame, bbox)
+                if not liveness["is_live"]:
+                    # Log spoof attempt
+                    spoof_dir = Path("data/spoof_attempts")
+                    spoof_dir.mkdir(parents=True, exist_ok=True)
+                    timestamp_str = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+                    img_path = str(spoof_dir / f"spoof_{timestamp_str}_{student.roll_number}.jpg")
+                    cv2.imwrite(img_path, frame)
+
+                    spoof_log = SpoofAttempt(
+                        session_id=session_obj.id,
+                        spoof_type=liveness["label"],
+                        image_path=img_path,
+                        timestamp=datetime.utcnow()
+                    )
+                    db.add(spoof_log)
+                    db.commit()
+
+                    rejected_spoofs.append({
+                        "student_id": student.id,
+                        "name": student.name,
+                        "roll_number": student.roll_number,
+                        "spoof_type": liveness["label"],
+                        "liveness_score": liveness["liveness_score"]
+                    })
                     continue
 
                 # Check if already marked for this session
@@ -143,13 +174,22 @@ def mark_live_attendance(session_id: Optional[int] = None, db: DBSession = Depen
 
     db.commit()
 
+    # Determine status response
+    if rejected_spoofs and not marked_students:
+        status_code = "spoof_rejected"
+        msg = f"Proxy attendance BLOCKED: {len(rejected_spoofs)} fake face / spoof attempt(s) detected!"
+    else:
+        status_code = "success"
+        msg = f"Processed {len(detections)} face(s). Marked {len(marked_students)} student(s)."
+
     return {
-        "status": "success",
+        "status": status_code,
         "session_id": session_obj.id,
         "faces_detected": len(detections),
         "newly_marked": marked_students,
         "already_present": already_marked,
-        "message": f"Processed {len(detections)} face(s). Marked {len(marked_students)} student(s)."
+        "rejected_spoofs": rejected_spoofs,
+        "message": msg
     }
 
 
@@ -206,3 +246,19 @@ def attendance_stats(db: DBSession = Depends(get_db)):
         "average_attendance_percentage": min(100.0, avg_attendance),
         "spoof_attempts_prevented": spoofs_prevented
     }
+
+
+@router.get("/spoofs")
+def list_spoof_attempts(db: DBSession = Depends(get_db)):
+    """List all detected and prevented spoof attempts."""
+    spoofs = db.query(SpoofAttempt).order_by(SpoofAttempt.timestamp.desc()).all()
+    return [
+        {
+            "id": s.id,
+            "session_id": s.session_id,
+            "spoof_type": s.spoof_type,
+            "timestamp": s.timestamp.isoformat(),
+            "image_path": s.image_path
+        }
+        for s in spoofs
+    ]

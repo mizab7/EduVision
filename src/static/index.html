@@ -265,7 +265,7 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 12px;
             margin-bottom: 20px;
         }
@@ -296,7 +296,7 @@
 <div class="container">
     <header>
         <div class="brand">
-            <h1>🎓 EduVision AI <span class="badge">Phase 2 Live Portal</span></h1>
+            <h1>🎓 EduVision AI <span class="badge">Phase 3 Anti-Spoof Active</span></h1>
         </div>
         <div>
             <a href="/docs" target="_blank" style="color: #60a5fa; text-decoration: none; font-size: 14px; font-weight: 500;">
@@ -317,6 +317,10 @@
         <div class="stat-box">
             <div class="stat-number" id="stat-percentage">0%</div>
             <div class="stat-label">Class Attendance</div>
+        </div>
+        <div class="stat-box" style="border-color: rgba(239, 68, 68, 0.4);">
+            <div class="stat-number" id="stat-spoofs" style="color: #f87171;">0</div>
+            <div class="stat-label">Spoofs Blocked 🛡️</div>
         </div>
     </div>
 
@@ -443,6 +447,7 @@
             document.getElementById('stat-students').innerText = data.total_enrolled_students;
             document.getElementById('stat-attendance').innerText = data.total_attendance_records;
             document.getElementById('stat-percentage').innerText = data.average_attendance_percentage + '%';
+            document.getElementById('stat-spoofs').innerText = data.spoof_attempts_prevented || 0;
         } catch (e) {
             console.error(e);
         }
@@ -538,17 +543,21 @@
         alert.style.background = 'rgba(37, 99, 235, 0.2)';
         alert.style.borderColor = 'rgba(37, 99, 235, 0.4)';
         alert.style.color = '#93c5fd';
-        alert.innerText = '🔍 Scanning live video feed...';
+        alert.innerText = '🔍 Scanning live video feed & checking liveness...';
 
         try {
             const res = await fetch('/attendance/mark-live', { method: 'POST' });
             const data = await res.json();
 
-            if (data.status === 'success') {
+            if (data.status === 'spoof_rejected') {
+                alert.className = 'alert-box alert-danger';
+                const details = data.rejected_spoofs.map(s => `${s.name} (${s.spoof_type.replace('_', ' ')})`).join(', ');
+                alert.innerHTML = `🛡️ <strong>PROXY BLOCKED:</strong> Fake Face Spoof Detected! Attempt by: ${details}`;
+            } else if (data.status === 'success') {
                 if (data.newly_marked && data.newly_marked.length > 0) {
                     alert.className = 'alert-box alert-success';
                     const names = data.newly_marked.map(s => `${s.name} (${(s.confidence * 100).toFixed(1)}%)`).join(', ');
-                    alert.innerText = `✅ Marked Present: ${names}`;
+                    alert.innerText = `✅ Marked Present [LIVE VERIFIED]: ${names}`;
                 } else if (data.already_present && data.already_present.length > 0) {
                     alert.className = 'alert-box alert-success';
                     const names = data.already_present.map(s => s.name).join(', ');

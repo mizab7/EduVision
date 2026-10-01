@@ -13,10 +13,12 @@ from config.settings import get_settings
 from src.database.connection import init_db
 from src.api.routes import students, attendance, engagement, sessions
 from src.face_recognition.detector import FaceDetector
+from src.anti_spoofing.liveness import AntiSpoofDetector
 from src.camera.capture import CameraWorker
 
 settings = get_settings()
 detector = FaceDetector()
+anti_spoof = AntiSpoofDetector(confidence_threshold=0.60)
 camera_worker = CameraWorker.get_instance(default_index=settings.CAMERA_INDEX)
 
 
@@ -29,10 +31,32 @@ def generate_camera_frames():
                 time.sleep(0.05)
                 continue
 
-            # Run face detection safely
+            # Run face detection and liveness analysis
             try:
                 detections = detector.detect_faces(frame)
-                annotated_frame = detector.draw_detections(frame, detections)
+                annotated_frame = frame.copy()
+                for det in detections:
+                    bbox = det["bbox"]
+                    liveness = anti_spoof.analyze_liveness(frame, bbox)
+                    is_live = liveness["is_live"]
+
+                    if is_live:
+                        color = (0, 255, 0) # Green for genuine human
+                        label = f"LIVE ({int(liveness['liveness_score']*100)}%)"
+                    else:
+                        color = (0, 0, 255) # Red for spoof attack
+                        label = f"SPOOF: {liveness['label'].upper()}"
+
+                    # Draw bounding box and landmarks
+                    cv2.rectangle(annotated_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
+                    for _, pt in det["landmarks"].items():
+                        cv2.circle(annotated_frame, pt, 2, color, -1)
+
+                    # Text banner
+                    tag_w = len(label) * 9 + 10
+                    cv2.rectangle(annotated_frame, (bbox[0], max(0, bbox[1] - 22)), (bbox[0] + tag_w, bbox[1]), color, -1)
+                    cv2.putText(annotated_frame, label, (bbox[0] + 5, max(14, bbox[1] - 6)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
             except Exception:
                 annotated_frame = frame
 
