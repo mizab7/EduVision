@@ -428,14 +428,12 @@
 </div>
 
 <script>
+    let reconnectTimer = null;
     function handleStreamError(img) {
-        img.onerror = null;
-        img.parentElement.innerHTML = `
-            <div style="text-align: center; padding: 20px;">
-                <p style="font-size: 16px; margin-bottom: 8px;">📷 Camera stream paused or starting...</p>
-                <p style="color: var(--text-muted); font-size: 13px;">If camera is busy or reloading, refresh the page.</p>
-            </div>
-        `;
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(() => {
+            img.src = '/camera/stream?t=' + new Date().getTime();
+        }, 500);
     }
 
     async function fetchStats() {
@@ -577,14 +575,17 @@
             const res = await fetch('/camera/devices');
             const data = await res.json();
             const select = document.getElementById('cameraSelect');
+            const activeIndex = data.status ? data.status.active_index : (data.active_index || 0);
+            const lowLight = data.status ? data.status.low_light_boost : (data.low_light_boost || false);
+            
             if (data.devices && data.devices.length > 0) {
                 select.innerHTML = data.devices.map(d => `
-                    <option value="${d.index}" ${d.index === data.active_index ? 'selected' : ''}>
-                        ${d.label} (${d.resolution})
+                    <option value="${d.index}" ${d.index === activeIndex ? 'selected' : ''}>
+                        ${d.label} [${d.resolution}]
                     </option>
                 `).join('');
             }
-            document.getElementById('lowLightToggle').checked = data.low_light_boost;
+            document.getElementById('lowLightToggle').checked = lowLight;
         } catch (e) {
             console.error('Failed to load camera devices:', e);
         }
@@ -601,11 +602,11 @@
                 body: JSON.stringify({ index: index, low_light_boost: lowLight })
             });
             
-            // Reload stream
+            // Re-point stream cleanly without flash
             setTimeout(() => {
                 const img = document.getElementById('videoStream');
                 img.src = '/camera/stream?t=' + new Date().getTime();
-            }, 300);
+            }, 400);
         } catch (e) {
             console.error('Failed to switch camera:', e);
         }

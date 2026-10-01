@@ -1,10 +1,10 @@
 import os
-import threading
+import time
 from pathlib import Path
 from contextlib import asynccontextmanager
 import cv2
 import uvicorn
-from fastapi import FastAPI, WebSocket, Query
+from fastapi import FastAPI, WebSocket
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -13,58 +13,20 @@ from config.settings import get_settings
 from src.database.connection import init_db
 from src.api.routes import students, attendance, engagement, sessions
 from src.face_recognition.detector import FaceDetector
-from src.camera.capture import CameraManager, enhance_low_light
+from src.camera.capture import CameraWorker
 
 settings = get_settings()
 detector = FaceDetector()
-
-# Global camera state
-camera_lock = threading.Lock()
-active_camera_index = settings.CAMERA_INDEX
-active_low_light_boost = False
-_camera_cap = None
-
-
-def get_camera_stream():
-    """Gets or initializes the active cv2.VideoCapture with HD resolution."""
-    global _camera_cap, active_camera_index
-    with camera_lock:
-        if _camera_cap is None or not _camera_cap.isOpened():
-            _camera_cap = cv2.VideoCapture(active_camera_index)
-            # Request HD resolution
-            _camera_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            _camera_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-    return _camera_cap
-
-
-def set_camera_device(index: int, low_light: bool = False):
-    """Safely switches camera hardware device and toggles low-light filter."""
-    global _camera_cap, active_camera_index, active_low_light_boost
-    with camera_lock:
-        active_camera_index = index
-        active_low_light_boost = low_light
-        if _camera_cap is not None and _camera_cap.isOpened():
-            _camera_cap.release()
-        _camera_cap = cv2.VideoCapture(active_camera_index)
-        _camera_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        _camera_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+camera_worker = CameraWorker.get_instance(default_index=settings.CAMERA_INDEX)
 
 
 def generate_camera_frames():
-    """Generates continuous MJPEG frames with optional low-light boost and face detection."""
-    global active_low_light_boost
+    """Generates continuous MJPEG frames from the background CameraWorker."""
     while True:
-        cap = get_camera_stream()
-        if cap is None or not cap.isOpened():
+        frame = camera_worker.get_frame()
+        if frame is None:
+            time.sleep(0.04)
             continue
-
-        ret, frame = cap.read()
-        if not ret or frame is None:
-            continue
-
-        # Low-light enhancement (CLAHE)
-        if active_low_light_boost:
-            frame = enhance_low_light(frame, clip_limit=3.0)
 
         # Run face detection
         detections = detector.detect_faces(frame)
@@ -73,12 +35,15 @@ def generate_camera_frames():
         # Encode frame as JPEG
         success, buffer = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
         if not success:
+            time.sleep(0.02)
             continue
 
         yield (
             b"--frame\r\n"
             b"Content-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n"
         )
+        # Target ~25-30 FPS stream
+        time.sleep(0.03)
 
 
 @asynccontextmanager
@@ -86,12 +51,8 @@ async def lifespan(app: FastAPI):
     # Startup: Initialize the database
     init_db()
     yield
-    # Shutdown: Clean up camera
-    global _camera_cap
-    with camera_lock:
-        if _camera_cap is not None and _camera_cap.isOpened():
-            _camera_cap.release()
-            _camera_cap = None
+    # Shutdown: Clean up camera hardware worker
+    camera_worker.release()
 
 
 app = FastAPI(
@@ -133,11 +94,11 @@ def health_check():
 @app.get("/camera/devices", tags=["Camera"])
 def list_cameras():
     """Detects and returns all available hardware cameras."""
-    devices = CameraManager.list_available_cameras(max_tested=3)
+    devices = CameraWorker.list_available_cameras(max_tested=3)
+    status = camera_worker.get_status()
     return {
         "devices": devices,
-        "active_index": active_camera_index,
-        "low_light_boost": active_low_light_boost
+        "status": status
     }
 
 
@@ -149,11 +110,10 @@ class CameraConfigPayload(BaseModel):
 @app.post("/camera/config", tags=["Camera"])
 def configure_camera(config: CameraConfigPayload):
     """Switches active camera index and toggles low-light enhancement filter."""
-    set_camera_device(config.index, config.low_light_boost)
+    camera_worker.switch_camera(config.index, config.low_light_boost)
     return {
         "status": "success",
-        "active_index": active_camera_index,
-        "low_light_boost": active_low_light_boost,
+        "camera_status": camera_worker.get_status(),
         "message": f"Camera switched to index {config.index} (Low-Light: {config.low_light_boost})"
     }
 
