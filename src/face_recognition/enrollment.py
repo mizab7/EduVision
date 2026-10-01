@@ -1,79 +1,121 @@
 """
-Student enrollment module for capturing and saving known face data.
+Student enrollment module for EduVision AI.
+Handles capturing face images, computing encrypted embeddings, and persisting to SQLite.
 """
 
 import os
+from pathlib import Path
+from typing import List, Optional, Tuple, Dict, Any
 import cv2
 import numpy as np
-from typing import List
-from ..camera.capture import CameraManager
-from .recognizer import FaceRecognizer
+from sqlalchemy.orm import Session as DBSession
+
+from src.face_recognition.recognizer import FaceRecognizer
+from src.security.encryption import EmbeddingEncryption
+from src.database.models import Student, FaceEmbedding
+from src.database.connection import SessionLocal
+
 
 class EnrollmentManager:
     """
-    Handles capturing, saving, and processing face enrollment data.
+    Manages student face capture, embedding extraction, encryption, and database storage.
     """
-    def __init__(self, data_dir: str = 'data/enrolled_faces'):
-        self.data_dir = data_dir
-        os.makedirs(self.data_dir, exist_ok=True)
+    def __init__(self, data_dir: str = "data/enrolled_faces"):
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
         self.recognizer = FaceRecognizer()
+        self.crypto = EmbeddingEncryption()
 
-    def capture_enrollment_images(self, camera: CameraManager, student_id: str, num_images: int = 5) -> List[np.ndarray]:
-        """Captures multiple images for enrollment."""
-        images = []
-        print(f"Starting capture for {student_id}. Please look at the camera.")
-        
-        captured = 0
-        while captured < num_images:
-            ret, frame = camera.read_frame()
-            if not ret or frame is None:
-                continue
-                
-            cv2.imshow("Enrollment Capture - Press 'c' to capture", frame)
-            
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord('c'):
-                images.append(frame.copy())
-                captured += 1
-                print(f"Captured {captured}/{num_images}")
-            elif key == ord('q'):
-                break
-                
-        cv2.destroyAllWindows()
-        return images
+    def enroll_from_images(
+        self,
+        student_id: int,
+        images: List[np.ndarray],
+        db: Optional[DBSession] = None
+    ) -> np.ndarray:
+        """
+        Extracts embeddings from provided images, averages them into a canonical
+        representation, encrypts it, and saves it in the database.
+        """
+        if not images:
+            raise ValueError("At least one face image is required for enrollment.")
 
-    def save_enrollment(self, student_id: str, images: List[np.ndarray]) -> None:
-        """Saves enrollment images to disk."""
-        student_dir = os.path.join(self.data_dir, student_id)
-        os.makedirs(student_dir, exist_ok=True)
-        
-        for i, img in enumerate(images):
-            filepath = os.path.join(student_dir, f"{i}.jpg")
-            cv2.imwrite(filepath, img)
-            
-        print(f"Saved {len(images)} images for {student_id}")
-
-    def generate_embeddings(self, student_id: str) -> np.ndarray:
-        """Generates a mean embedding from saved enrollment images."""
-        student_dir = os.path.join(self.data_dir, student_id)
-        if not os.path.exists(student_dir):
-            raise ValueError(f"No enrollment data found for {student_id}")
-            
         embeddings = []
-        for filename in os.listdir(student_dir):
-            if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-                img_path = os.path.join(student_dir, filename)
-                img = cv2.imread(img_path)
-                if img is not None:
-                    try:
-                        emb = self.recognizer.extract_embedding(img)
-                        embeddings.append(emb)
-                    except ValueError:
-                        pass
-                        
+        for img in images:
+            try:
+                emb = self.recognizer.extract_embedding(img)
+                embeddings.append(emb)
+            except Exception as e:
+                # Skip invalid or no-face frames
+                continue
+
         if not embeddings:
-            raise ValueError(f"Failed to extract embeddings for {student_id}")
-            
-        mean_embedding = np.mean(embeddings, axis=0)
-        # Normalize the mean embedding
-        return mean_embedding / np.linalg.norm(mean_embedding)
+            raise ValueError("No valid faces were detected in the provided enrollment images.")
+
+        # Compute mean normalized embedding
+        mean_emb = np.mean(embeddings, axis=0)
+        norm = np.linalg.norm(mean_emb)
+        if norm > 0:
+            mean_emb = mean_emb / norm
+
+        # Encrypt the embedding for privacy
+        encrypted_bytes = self.crypto.encrypt_embedding(mean_emb)
+
+        # Persist to database
+        close_db = False
+        if db is None:
+            db = SessionLocal()
+            close_db = True
+
+        try:
+            # Check if student exists
+            student = db.query(Student).filter(Student.id == student_id).first()
+            if not student:
+                raise ValueError(f"Student with ID {student_id} does not exist.")
+
+            # Replace or add face embedding
+            existing = db.query(FaceEmbedding).filter(FaceEmbedding.student_id == student_id).first()
+            if existing:
+                existing.embedding_data = encrypted_bytes
+            else:
+                new_record = FaceEmbedding(
+                    student_id=student_id,
+                    embedding_data=encrypted_bytes
+                )
+                db.add(new_record)
+
+            db.commit()
+        finally:
+            if close_db:
+                db.close()
+
+        # Save a reference photo to disk
+        student_dir = self.data_dir / str(student_id)
+        student_dir.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(student_dir / "canonical.jpg"), images[0])
+
+        return mean_emb
+
+    def load_known_embeddings(self, db: Optional[DBSession] = None) -> Dict[int, np.ndarray]:
+        """
+        Loads and decrypts all enrolled student embeddings from the database.
+        Returns a dictionary mapping {student_id: 128-d numpy array}.
+        """
+        close_db = False
+        if db is None:
+            db = SessionLocal()
+            close_db = True
+
+        known = {}
+        try:
+            records = db.query(FaceEmbedding).all()
+            for rec in records:
+                try:
+                    decrypted = self.crypto.decrypt_embedding(rec.embedding_data, shape=(128,))
+                    known[rec.student_id] = decrypted
+                except Exception as e:
+                    print(f"Warning: Failed to decrypt embedding for student {rec.student_id}: {e}")
+        finally:
+            if close_db:
+                db.close()
+
+        return known
