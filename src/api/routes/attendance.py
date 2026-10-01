@@ -57,15 +57,19 @@ def mark_live_attendance(session_id: Optional[int] = None, db: DBSession = Depen
             db.commit()
             db.refresh(session_obj)
 
-    # 2. Capture a frame from camera
+    # 2. Capture a frame from active camera stream
     try:
-        with CameraManager(camera_index=0) as cam:
-            ret, frame = cam.read_frame()
+        from src.main import get_camera_stream, active_low_light_boost
+        from src.camera.capture import enhance_low_light
+        cap = get_camera_stream()
+        ret, frame = cap.read()
+        if ret and frame is not None and active_low_light_boost:
+            frame = enhance_low_light(frame, clip_limit=3.0)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Camera error: {str(e)}")
 
     if not ret or frame is None:
-        raise HTTPException(status_code=500, detail="Failed to capture frame from camera.")
+        raise HTTPException(status_code=500, detail="Failed to capture frame from active camera.")
 
     # 3. Detect faces
     detections = detector.detect_faces(frame)

@@ -129,16 +129,23 @@ def enroll_student_webcam(student_id: int, db: Session = Depends(get_db)):
 
     frames = []
     try:
-        with CameraManager(camera_index=0) as cam:
-            for _ in range(5):
-                ret, frame = cam.read_frame()
-                if ret and frame is not None:
-                    frames.append(frame)
+        from src.main import get_camera_stream, active_low_light_boost
+        from src.camera.capture import enhance_low_light
+        import time
+
+        cap = get_camera_stream()
+        for _ in range(5):
+            ret, frame = cap.read()
+            if ret and frame is not None:
+                if active_low_light_boost:
+                    frame = enhance_low_light(frame, clip_limit=3.0)
+                frames.append(frame.copy())
+            time.sleep(0.05)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to access camera: {str(e)}")
 
     if not frames:
-        raise HTTPException(status_code=500, detail="Failed to capture frames from camera.")
+        raise HTTPException(status_code=500, detail="Failed to capture frames from active camera.")
 
     try:
         enrollment_mgr.enroll_from_images(student_id, frames, db=db)

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduVision AI — Smart Classroom Live Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+
+        .brand h1 {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge {
+            background: rgba(37, 99, 235, 0.2);
+            color: #60a5fa;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(37, 99, 235, 0.4);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .card-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .video-container {
+            width: 100%;
+            height: 380px;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border: 2px solid var(--border);
+        }
+
+        .video-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .live-tag {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(239, 68, 68, 0.85);
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .action-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+            flex: 1;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        input, select {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .table-container {
+            max-height: 280px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: #0f172a;
+            color: var(--text-muted);
+            text-align: left;
+            padding: 10px;
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .status-pill {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-present {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .alert-box {
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 14px;
+            display: none;
+            font-size: 13px;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #6ee7b7;
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 20px;
+            font-weight: 700;
+            color: #60a5fa;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="brand">
+            <h1>🎓 EduVision AI <span class="badge">Phase 2 Live Portal</span></h1>
+        </div>
+        <div>
+            <a href="/docs" target="_blank" style="color: #60a5fa; text-decoration: none; font-size: 14px; font-weight: 500;">
+                Swagger API Docs &rarr;
+            </a>
+        </div>
+    </header>
+
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="stat-number" id="stat-students">0</div>
+            <div class="stat-label">Enrolled Students</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number" id="stat-attendance">0</div>
+            <div class="stat-label">Attendance Records</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number" id="stat-percentage">0%</div>
+            <div class="stat-label">Class Attendance</div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <!-- Live Video & Recognition -->
+        <div class="card">
+            <div class="card-header">
+                <h2>🎥 Live Classroom Camera & Recognition</h2>
+                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3);">
+                    YuNet + SFace Active
+                </span>
+            </div>
+
+            <!-- Camera Controls Bar -->
+            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 14px; background: #0f172a; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);">
+                <div style="flex: 1;">
+                    <label style="font-size: 11px; margin-bottom: 4px; color: var(--text-muted);">📷 Active Camera Device</label>
+                    <select id="cameraSelect" onchange="handleCameraChange()" style="padding: 8px 10px; font-size: 13px;">
+                        <option value="0">Camera 0 (MacBook FaceTime HD)</option>
+                        <option value="1">Camera 1 (External Web Camera)</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 14px;">
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: #f8fafc;">
+                        <input type="checkbox" id="lowLightToggle" onchange="handleCameraChange()" style="width: 16px; height: 16px; accent-color: var(--primary);">
+                        💡 Low-Light Boost
+                    </label>
+                </div>
+            </div>
+
+            <div class="video-container">
+                <div class="live-tag">
+                    <div class="live-dot"></div> LIVE
+                </div>
+                <img id="videoStream" src="/camera/stream" alt="Live Camera Feed" onerror="handleStreamError(this)">
+            </div>
+
+            <div class="action-row">
+                <button class="btn btn-success" onclick="markLiveAttendance()">
+                    ⚡ Mark Live Attendance Now
+                </button>
+            </div>
+
+            <div id="attendanceAlert" class="alert-box"></div>
+        </div>
+
+        <!-- Student Registration & Enrollment -->
+        <div>
+            <div class="card" style="margin-bottom: 24px;">
+                <div class="card-header">
+                    <h2>👤 Enroll New Student Face</h2>
+                </div>
+
+                <form id="enrollForm" onsubmit="handleEnroll(event)">
+                    <div class="form-group">
+                        <label>Student Full Name</label>
+                        <input type="text" id="studentName" required placeholder="e.g. Muhammad Mishab">
+                    </div>
+                    <div class="form-group">
+                        <label>Roll / ID Number</label>
+                        <input type="text" id="studentRoll" required placeholder="e.g. AIML-2026-003">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label>Department</label>
+                            <input type="text" id="studentDept" value="AI & ML" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Semester</label>
+                            <input type="number" id="studentSem" value="7" required min="1" max="8">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn" id="enrollBtn">
+                        📸 Capture & Enroll via Webcam
+                    </button>
+                </form>
+
+                <div id="enrollAlert" class="alert-box"></div>
+            </div>
+
+            <!-- Attendance History -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>📋 Live Attendance Log</h2>
+                    <button onclick="fetchAttendance()" style="background: transparent; border: none; color: #60a5fa; cursor: pointer; font-size: 13px;">
+                        🔄 Refresh
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Roll No</th>
+                                <th>Time</th>
+                                <th>Confidence</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTableBody">
+                            <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No records found.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function handleStreamError(img) {
+        img.onerror = null;
+        img.parentElement.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+                <p style="font-size: 16px; margin-bottom: 8px;">📷 Camera stream paused or starting...</p>
+                <p style="color: var(--text-muted); font-size: 13px;">If camera is busy or reloading, refresh the page.</p>
+            </div>
+        `;
+    }
+
+    async function fetchStats() {
+        try {
+            const res = await fetch('/attendance/stats');
+            const data = await res.json();
+            document.getElementById('stat-students').innerText = data.total_enrolled_students;
+            document.getElementById('stat-attendance').innerText = data.total_attendance_records;
+            document.getElementById('stat-percentage').innerText = data.average_attendance_percentage + '%';
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function fetchAttendance() {
+        try {
+            const res = await fetch('/attendance/');
+            const records = await res.json();
+            const tbody = document.getElementById('attendanceTableBody');
+            
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No attendance marked yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = records.map(r => `
+                <tr>
+                    <td><strong>${r.student_name}</strong></td>
+                    <td>${r.roll_number}</td>
+                    <td>${new Date(r.marked_at).toLocaleTimeString()}</td>
+                    <td><span class="status-pill status-present">${(r.confidence * 100).toFixed(1)}%</span></td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function handleEnroll(e) {
+        e.preventDefault();
+        const btn = document.getElementById('enrollBtn');
+        const alert = document.getElementById('enrollAlert');
+        btn.disabled = true;
+        btn.innerText = '⏳ Capturing & Encrypting...';
+        alert.style.display = 'none';
+
+        try {
+            // 1. Create student
+            const studentData = {
+                name: document.getElementById('studentName').value,
+                roll_number: document.getElementById('studentRoll').value,
+                department: document.getElementById('studentDept').value,
+                semester: parseInt(document.getElementById('studentSem').value)
+            };
+
+            const createRes = await fetch('/students/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(studentData)
+            });
+
+            if (!createRes.ok) {
+                const err = await createRes.json();
+                throw new Error(err.detail || 'Failed to create student');
+            }
+
+            const student = await createRes.json();
+
+            // 2. Trigger webcam enrollment
+            const enrollRes = await fetch(`/students/${student.id}/enroll-webcam`, {
+                method: 'POST'
+            });
+
+            if (!enrollRes.ok) {
+                const err = await enrollRes.json();
+                throw new Error(err.detail || 'Webcam enrollment failed');
+            }
+
+            const enrollData = await enrollRes.json();
+            alert.className = 'alert-box alert-success';
+            alert.innerText = `✅ Enrolled ${student.name}! Face embeddings encrypted & stored.`;
+            alert.style.display = 'block';
+
+            // Reset form
+            document.getElementById('studentName').value = '';
+            document.getElementById('studentRoll').value = '';
+            fetchStats();
+        } catch (err) {
+            alert.className = 'alert-box alert-danger';
+            alert.innerText = `❌ ${err.message}`;
+            alert.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.innerText = '📸 Capture & Enroll via Webcam';
+        }
+    }
+
+    async function markLiveAttendance() {
+        const alert = document.getElementById('attendanceAlert');
+        alert.style.display = 'block';
+        alert.className = 'alert-box';
+        alert.style.background = 'rgba(37, 99, 235, 0.2)';
+        alert.style.borderColor = 'rgba(37, 99, 235, 0.4)';
+        alert.style.color = '#93c5fd';
+        alert.innerText = '🔍 Scanning live video feed...';
+
+        try {
+            const res = await fetch('/attendance/mark-live', { method: 'POST' });
+            const data = await res.json();
+
+            if (data.status === 'success') {
+                if (data.newly_marked && data.newly_marked.length > 0) {
+                    alert.className = 'alert-box alert-success';
+                    const names = data.newly_marked.map(s => `${s.name} (${(s.confidence * 100).toFixed(1)}%)`).join(', ');
+                    alert.innerText = `✅ Marked Present: ${names}`;
+                } else if (data.already_present && data.already_present.length > 0) {
+                    alert.className = 'alert-box alert-success';
+                    const names = data.already_present.map(s => s.name).join(', ');
+                    alert.innerText = `ℹ️ Already Marked Present: ${names}`;
+                } else {
+                    alert.className = 'alert-box alert-danger';
+                    alert.innerText = `⚠️ ${data.message}`;
+                }
+            } else {
+                alert.className = 'alert-box alert-danger';
+                alert.innerText = `⚠️ ${data.message}`;
+            }
+
+            fetchAttendance();
+            fetchStats();
+        } catch (err) {
+            alert.className = 'alert-box alert-danger';
+            alert.innerText = `❌ Error: ${err.message}`;
+        }
+    }
+
+    async function loadCameraDevices() {
+        try {
+            const res = await fetch('/camera/devices');
+            const data = await res.json();
+            const select = document.getElementById('cameraSelect');
+            if (data.devices && data.devices.length > 0) {
+                select.innerHTML = data.devices.map(d => `
+                    <option value="${d.index}" ${d.index === data.active_index ? 'selected' : ''}>
+                        ${d.label} (${d.resolution})
+                    </option>
+                `).join('');
+            }
+            document.getElementById('lowLightToggle').checked = data.low_light_boost;
+        } catch (e) {
+            console.error('Failed to load camera devices:', e);
+        }
+    }
+
+    async function handleCameraChange() {
+        const index = parseInt(document.getElementById('cameraSelect').value);
+        const lowLight = document.getElementById('lowLightToggle').checked;
+        
+        try {
+            await fetch('/camera/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ index: index, low_light_boost: lowLight })
+            });
+            
+            // Reload stream
+            setTimeout(() => {
+                const img = document.getElementById('videoStream');
+                img.src = '/camera/stream?t=' + new Date().getTime();
+            }, 300);
+        } catch (e) {
+            console.error('Failed to switch camera:', e);
+        }
+    }
+
+    // Initial load
+    loadCameraDevices();
+    fetchStats();
+    fetchAttendance();
+    setInterval(fetchAttendance, 10000);
+</script>
+
+</body>
+</html>
