@@ -1,5 +1,5 @@
 """
-Blink detection module using Eye Aspect Ratio (EAR).
+Blink detection module using Eye Aspect Ratio (EAR) with MediaPipe 1.0 Tasks API.
 """
 
 import numpy as np
@@ -16,7 +16,7 @@ class BlinkDetector:
         self.blink_history = deque(maxlen=100) # stores timestamps of blinks
         self.was_closed = False
 
-    def calculate_ear(self, eye_landmarks: List[Tuple[int, int]]) -> float:
+    def calculate_ear(self, eye_landmarks: List[Tuple[float, float]]) -> float:
         """Calculates Eye Aspect Ratio."""
         if len(eye_landmarks) < 6:
             return 0.0
@@ -30,11 +30,23 @@ class BlinkDetector:
             return 0.0
         return (v1 + v2) / (2.0 * h)
 
-    def detect(self, face_landmarks: Dict[str, List[Tuple[int, int]]]) -> Dict[str, Any]:
-        """Detects blinking from left and right eye landmarks."""
-        # Assume face_landmarks has 'left_eye' and 'right_eye' lists
-        left_eye = face_landmarks.get('left_eye', [])
-        right_eye = face_landmarks.get('right_eye', [])
+    def detect(self, face_landmarks) -> Dict[str, Any]:
+        """Detects blinking from left and right eye landmarks. face_landmarks is a list of NormalizedLandmark."""
+        if not face_landmarks or len(face_landmarks) < 468:
+            return {
+                'ear_left': 0.0,
+                'ear_right': 0.0,
+                'ear_avg': 0.0,
+                'is_blinking': False,
+                'blink_rate_per_min': 0,
+                'is_drowsy': False
+            }
+            
+        left_eye_indices = [33, 160, 158, 133, 153, 144]
+        right_eye_indices = [362, 385, 387, 263, 373, 380]
+        
+        left_eye = [(face_landmarks[i].x, face_landmarks[i].y) for i in left_eye_indices]
+        right_eye = [(face_landmarks[i].x, face_landmarks[i].y) for i in right_eye_indices]
         
         ear_left = self.calculate_ear(left_eye)
         ear_right = self.calculate_ear(right_eye)

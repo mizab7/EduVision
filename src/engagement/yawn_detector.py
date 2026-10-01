@@ -1,5 +1,5 @@
 """
-Yawn detection module using Mouth Aspect Ratio (MAR).
+Yawn detection module using Mouth Aspect Ratio (MAR) with MediaPipe 1.0 Tasks API.
 """
 
 import numpy as np
@@ -16,23 +16,31 @@ class YawnDetector:
         self.yawn_history = deque(maxlen=50)
         self.is_currently_yawning = False
 
-    def calculate_mar(self, mouth_landmarks: List[Tuple[int, int]]) -> float:
+    def calculate_mar(self, mouth_landmarks: List[Tuple[float, float]]) -> float:
         """Calculates Mouth Aspect Ratio."""
-        if len(mouth_landmarks) < 6:
+        if len(mouth_landmarks) < 4:
             return 0.0
             
-        v1 = np.linalg.norm(np.array(mouth_landmarks[1]) - np.array(mouth_landmarks[7]))
-        v2 = np.linalg.norm(np.array(mouth_landmarks[2]) - np.array(mouth_landmarks[6]))
-        v3 = np.linalg.norm(np.array(mouth_landmarks[3]) - np.array(mouth_landmarks[5]))
-        h = np.linalg.norm(np.array(mouth_landmarks[0]) - np.array(mouth_landmarks[4]))
+        # For 4 points: 0 is left, 1 is right, 2 is upper, 3 is lower
+        v1 = np.linalg.norm(np.array(mouth_landmarks[2]) - np.array(mouth_landmarks[3]))
+        h = np.linalg.norm(np.array(mouth_landmarks[0]) - np.array(mouth_landmarks[1]))
         
         if h == 0:
             return 0.0
-        return (v1 + v2 + v3) / (3.0 * h)
+        return v1 / h
 
-    def detect(self, face_landmarks: Dict[str, List[Tuple[int, int]]]) -> Dict[str, Any]:
-        """Detects yawns."""
-        mouth_landmarks = face_landmarks.get('mouth', [])
+    def detect(self, face_landmarks) -> Dict[str, Any]:
+        """Detects yawns from face_landmarks (list of NormalizedLandmark)."""
+        if not face_landmarks or len(face_landmarks) < 309:
+            return {
+                'mar': 0.0,
+                'is_yawning': False,
+                'yawn_count': 0,
+                'yawn_frequency': 0
+            }
+            
+        mouth_indices = [78, 308, 13, 14] # left, right, upper, lower
+        mouth_landmarks = [(face_landmarks[i].x, face_landmarks[i].y) for i in mouth_indices]
         mar = self.calculate_mar(mouth_landmarks)
         
         is_yawning = mar > self.mar_threshold

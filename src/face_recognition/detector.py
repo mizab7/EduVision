@@ -1,5 +1,5 @@
 """
-Face detection module using MediaPipe (with RetinaFace placeholder).
+Face detection module using MediaPipe 1.0 Tasks API.
 """
 
 import cv2
@@ -8,27 +8,28 @@ from typing import List, Dict, Any, Optional
 
 try:
     import mediapipe as mp
+    from mediapipe.tasks.python import vision
 except ImportError:
     mp = None
+    vision = None
 
 
 class FaceDetector:
     """
-    Detects faces in an image.
+    Detects faces in an image using MediaPipe Tasks API.
     """
     def __init__(self, model_name: str = 'retinaface', confidence_threshold: float = 0.5):
         self.model_name = model_name
         self.confidence_threshold = confidence_threshold
         
-        if self.model_name == 'mediapipe' or self.model_name == 'retinaface':
-            # Use mediapipe as default working backend
-            if mp is None:
+        if self.model_name in ['mediapipe', 'retinaface']:
+            if mp is None or vision is None:
                 raise ImportError("MediaPipe is required for face detection.")
-            self.mp_face_detection = mp.solutions.face_detection
-            self.detector = self.mp_face_detection.FaceDetection(
-                model_selection=1, 
-                min_detection_confidence=self.confidence_threshold
+            options = vision.FaceDetectorOptions(
+                min_detection_confidence=self.confidence_threshold,
+                num_faces=10
             )
+            self.detector = vision.FaceDetector.create_from_options(options)
         else:
             raise ValueError(f"Unsupported model: {self.model_name}")
 
@@ -37,19 +38,24 @@ class FaceDetector:
         results = []
         if self.model_name in ['mediapipe', 'retinaface']:
             image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            out = self.detector.process(image_rgb)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image_rgb)
+            
+            out = self.detector.detect(mp_image)
             
             if out.detections:
                 h, w, _ = frame.shape
                 for detection in out.detections:
-                    bboxC = detection.location_data.relative_bounding_box
-                    x1, y1 = int(bboxC.xmin * w), int(bboxC.ymin * h)
-                    x2, y2 = int((bboxC.xmin + bboxC.width) * w), int((bboxC.ymin + bboxC.height) * h)
-                    confidence = detection.score[0]
+                    bbox = detection.bounding_box
+                    x1 = bbox.origin_x
+                    y1 = bbox.origin_y
+                    x2 = x1 + bbox.width
+                    y2 = y1 + bbox.height
+                    
+                    confidence = detection.categories[0].score if detection.categories else 0.0
                     
                     landmarks = {}
-                    if hasattr(detection.location_data, 'relative_keypoints'):
-                        for i, kp in enumerate(detection.location_data.relative_keypoints):
+                    if hasattr(detection, 'keypoints') and detection.keypoints:
+                        for i, kp in enumerate(detection.keypoints):
                             landmarks[f'kp_{i}'] = (int(kp.x * w), int(kp.y * h))
                             
                     results.append({
