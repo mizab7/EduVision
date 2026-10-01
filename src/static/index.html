@@ -601,14 +601,9 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ index: index, low_light_boost: lowLight })
             });
-            
-            // Re-point stream cleanly without flash
-            setTimeout(() => {
-                const img = document.getElementById('videoStream');
-                img.src = '/camera/stream?t=' + new Date().getTime();
-            }, 400);
+            // The active MJPEG connection seamlessly receives the updated frames
         } catch (e) {
-            console.error('Failed to switch camera:', e);
+            console.error('Failed to update camera config:', e);
         }
     }
 

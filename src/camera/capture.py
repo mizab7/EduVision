@@ -83,9 +83,11 @@ class CameraWorker:
     def switch_camera(self, new_index: int, low_light: bool = False):
         """Safely switches camera hardware index and updates low-light settings."""
         with self.lock:
-            self.camera_index = new_index
             self.low_light_boost = low_light
-            self._open_hardware(new_index)
+            # Only reconnect hardware if the camera index actually changed
+            if self.camera_index != new_index or self.cap is None or not self.cap.isOpened():
+                self.camera_index = new_index
+                self._open_hardware(new_index)
 
     def set_low_light_boost(self, enable: bool):
         with self.lock:
