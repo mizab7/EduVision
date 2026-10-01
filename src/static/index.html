@@ -3,20 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EduVision AI — Smart Classroom Live Portal</title>
+    <title>EduVision AI — Smart Classroom Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --bg: #0f172a;
+            --bg-color: #0b0f19;
             --card-bg: #1e293b;
-            --text: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: #334155;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
+            --purple: #8b5cf6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
         }
 
         * {
@@ -27,14 +28,13 @@
         }
 
         body {
-            background-color: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--text-main);
             padding: 24px;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1320px;
             margin: 0 auto;
         }
 
@@ -42,9 +42,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border);
             margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
         }
 
         .brand h1 {
@@ -56,32 +56,61 @@
         }
 
         .badge {
-            background: rgba(37, 99, 235, 0.2);
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(59, 130, 246, 0.15);
             color: #60a5fa;
-            font-size: 12px;
             padding: 4px 10px;
-            border-radius: 999px;
-            border: 1px solid rgba(37, 99, 235, 0.4);
+            border-radius: 9999px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-box {
+            background: #0f172a;
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 22px;
+            font-weight: 700;
+            color: #60a5fa;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
         }
 
         .grid {
             display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
+            grid-template-columns: 1.25fr 1fr;
             gap: 24px;
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 1024px) {
             .grid {
                 grid-template-columns: 1fr;
             }
         }
 
         .card {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
+            background-color: var(--card-bg);
             border-radius: 12px;
+            border: 1px solid var(--border);
             padding: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
         }
 
         .card-header {
@@ -92,13 +121,13 @@
         }
 
         .card-header h2 {
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 600;
         }
 
         .video-container {
             width: 100%;
-            height: 380px;
+            height: 440px;
             background: #000;
             border-radius: 8px;
             overflow: hidden;
@@ -106,28 +135,30 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            border: 2px solid var(--border);
+            border: 1px solid var(--border);
         }
 
         .video-container img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
         }
 
         .live-tag {
             position: absolute;
             top: 12px;
-            left: 12px;
+            right: 12px;
             background: rgba(239, 68, 68, 0.85);
             color: white;
-            font-size: 12px;
-            font-weight: 600;
             padding: 4px 8px;
-            border-radius: 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
             display: flex;
             align-items: center;
             gap: 6px;
+            letter-spacing: 0.5px;
+            z-index: 10;
         }
 
         .live-dot {
@@ -139,21 +170,50 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
+            0% { opacity: 1; }
             50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 8px;
+            background: #0f172a;
+            padding: 6px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 12px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mode-btn.active {
+            background: var(--primary);
+            color: white;
         }
 
         .action-row {
             display: flex;
             gap: 12px;
-            margin-top: 16px;
+            margin-top: 14px;
         }
 
         .btn {
             background: var(--primary);
             color: white;
             border: none;
-            padding: 12px 18px;
+            padding: 11px 16px;
             border-radius: 8px;
             font-weight: 600;
             cursor: pointer;
@@ -162,7 +222,7 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            font-size: 14px;
+            font-size: 13px;
             flex: 1;
         }
 
@@ -170,33 +230,30 @@
             background: var(--primary-hover);
         }
 
-        .btn-success {
-            background: var(--success);
-        }
-
-        .btn-success:hover {
-            background: #059669;
-        }
+        .btn-success { background: var(--success); }
+        .btn-success:hover { background: #059669; }
+        .btn-purple { background: var(--purple); }
+        .btn-purple:hover { background: #7c3aed; }
 
         .form-group {
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
 
         label {
             display: block;
-            font-size: 13px;
+            font-size: 12px;
             color: var(--text-muted);
-            margin-bottom: 6px;
+            margin-bottom: 5px;
         }
 
         input, select {
             width: 100%;
             background: #0f172a;
             border: 1px solid var(--border);
-            padding: 10px 12px;
+            padding: 9px 12px;
             border-radius: 6px;
             color: white;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         input:focus, select:focus {
@@ -205,89 +262,128 @@
         }
 
         .table-container {
-            max-height: 280px;
+            max-height: 250px;
             overflow-y: auto;
-            margin-top: 10px;
+            margin-top: 8px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         th {
             background: #0f172a;
             color: var(--text-muted);
             text-align: left;
-            padding: 10px;
+            padding: 9px;
             position: sticky;
             top: 0;
         }
 
         td {
-            padding: 10px;
+            padding: 9px;
             border-bottom: 1px solid var(--border);
         }
 
         .status-pill {
             display: inline-block;
-            padding: 3px 8px;
+            padding: 2px 7px;
             border-radius: 999px;
             font-size: 11px;
             font-weight: 600;
         }
 
-        .status-present {
-            background: rgba(16, 185, 129, 0.2);
-            color: #34d399;
-        }
+        .status-high { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-med { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .status-low { background: rgba(239, 68, 68, 0.2); color: #f87171; }
 
         .alert-box {
-            padding: 12px;
+            padding: 11px 14px;
             border-radius: 8px;
-            margin-top: 14px;
+            margin-top: 12px;
             display: none;
             font-size: 13px;
         }
 
-        .alert-success {
-            background: rgba(16, 185, 129, 0.15);
-            border: 1px solid rgba(16, 185, 129, 0.4);
-            color: #6ee7b7;
+        .alert-success { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; }
+        .alert-danger { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; }
+
+        .meter-bar {
+            height: 6px;
+            background: #334155;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 4px;
         }
 
-        .alert-danger {
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.4);
-            color: #fca5a5;
+        .meter-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
         }
 
-        .stats-grid {
+        .signals-row {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
+            gap: 8px;
+            margin-top: 12px;
         }
 
-        .stat-box {
+        .signal-badge {
             background: #0f172a;
-            padding: 12px;
-            border-radius: 8px;
+            padding: 8px;
+            border-radius: 6px;
             border: 1px solid var(--border);
             text-align: center;
         }
 
-        .stat-number {
-            font-size: 20px;
-            font-weight: 700;
-            color: #60a5fa;
+        .signal-title {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
         }
 
-        .stat-label {
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-top: 4px;
+        .signal-val {
+            font-size: 12px;
+            font-weight: 700;
+            margin-top: 3px;
+        }
+
+        .assistant-rec-box {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+
+        .alert-card {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .alert-card.critical {
+            border-color: rgba(239, 68, 68, 0.5);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .alert-card.warning {
+            border-color: rgba(245, 158, 11, 0.5);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .alert-card.info {
+            border-color: rgba(59, 130, 246, 0.5);
+            background: rgba(59, 130, 246, 0.08);
         }
     </style>
 </head>
@@ -296,15 +392,31 @@
 <div class="container">
     <header>
         <div class="brand">
-            <h1>🎓 EduVision AI <span class="badge">Phase 3 Anti-Spoof Active</span></h1>
+            <h1>🎓 EduVision AI <span class="badge">Phase 6: Predictive Analytics & ML Active</span></h1>
         </div>
-        <div>
-            <a href="/docs" target="_blank" style="color: #60a5fa; text-decoration: none; font-size: 14px; font-weight: 500;">
+        <div style="display: flex; gap: 14px; align-items: center;">
+            <a href="/docs" target="_blank" style="color: #60a5fa; text-decoration: none; font-size: 13px; font-weight: 500;">
                 Swagger API Docs &rarr;
             </a>
         </div>
     </header>
 
+    <!-- Main Navigation Tabs -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+        <button id="tabBtnLive" onclick="switchNavTab('live')" style="padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; border: none; background: var(--primary); color: white; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+            🎥 Live Classroom Monitor
+        </button>
+        <button id="tabBtnAnalytics" onclick="switchNavTab('analytics')" style="padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; border: 1px solid var(--border); background: #0f172a; color: var(--text-muted); display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+            📈 Predictive Analytics & Trends
+            <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); font-size: 10px;">
+                ML Powered
+            </span>
+        </button>
+    </div>
+
+    <!-- Live Classroom Monitor View -->
+    <div id="viewLiveTab">
+    <!-- Top KPI Row -->
     <div class="stats-grid">
         <div class="stat-box">
             <div class="stat-number" id="stat-students">0</div>
@@ -322,54 +434,149 @@
             <div class="stat-number" id="stat-spoofs" style="color: #f87171;">0</div>
             <div class="stat-label">Spoofs Blocked 🛡️</div>
         </div>
+        <div class="stat-box" style="border-color: rgba(139, 92, 246, 0.4);">
+            <div class="stat-number" id="stat-cei" style="color: #a78bfa;">0.0%</div>
+            <div class="stat-label">Class Engagement Index 📊</div>
+        </div>
     </div>
 
     <div class="grid">
         <!-- Live Video & Recognition -->
-        <div class="card">
-            <div class="card-header">
-                <h2>🎥 Live Classroom Camera & Recognition</h2>
-                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3);">
-                    YuNet + SFace Active
-                </span>
-            </div>
-
-            <!-- Camera Controls Bar -->
-            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 14px; background: #0f172a; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);">
-                <div style="flex: 1;">
-                    <label style="font-size: 11px; margin-bottom: 4px; color: var(--text-muted);">📷 Active Camera Device</label>
-                    <select id="cameraSelect" onchange="handleCameraChange()" style="padding: 8px 10px; font-size: 13px;">
-                        <option value="0">Camera 0 (MacBook FaceTime HD)</option>
-                        <option value="1">Camera 1 (External Web Camera)</option>
-                    </select>
+        <div>
+            <div class="card">
+                <div class="card-header">
+                    <h2>🎥 Live Classroom Stream & AI Perception</h2>
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3);">
+                        YuNet + SFace + MiniFASNet + YOLOv8
+                    </span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px; margin-top: 14px;">
-                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: #f8fafc;">
-                        <input type="checkbox" id="lowLightToggle" onchange="handleCameraChange()" style="width: 16px; height: 16px; accent-color: var(--primary);">
-                        💡 Low-Light Boost
-                    </label>
+
+                <!-- Camera Controls Bar -->
+                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px; background: #0f172a; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);">
+                    <div style="flex: 1;">
+                        <label style="font-size: 11px; margin-bottom: 3px; color: var(--text-muted);">📷 Active Camera Device</label>
+                        <select id="cameraSelect" onchange="handleCameraChange()" style="padding: 7px 10px; font-size: 13px;">
+                            <option value="1">Camera 1 — Built-in Mac Camera (FaceTime HD) [1080p]</option>
+                            <option value="0">Camera 0 — External Web Camera (W100) [480p]</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 14px;">
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: #f8fafc;">
+                            <input type="checkbox" id="lowLightToggle" onchange="handleCameraChange()" style="width: 15px; height: 15px; accent-color: var(--primary);">
+                            💡 Low-Light Boost
+                        </label>
+                    </div>
+                </div>
+
+                <!-- AI Overlay Mode Selector -->
+                <div class="mode-selector">
+                    <button class="mode-btn active" id="modeDual" onclick="setOverlayMode('dual')">
+                        ✨ Dual AI Mode (Liveness + Attentive HUD)
+                    </button>
+                    <button class="mode-btn" id="modeEngagement" onclick="setOverlayMode('engagement')">
+                        📊 Engagement AI
+                    </button>
+                    <button class="mode-btn" id="modeAttendance" onclick="setOverlayMode('attendance')">
+                        🛡️ Anti-Spoof Attendance
+                    </button>
+                </div>
+
+                <div class="video-container">
+                    <div class="live-tag">
+                        <div class="live-dot"></div> LIVE
+                    </div>
+                    <img id="videoStream" src="/camera/stream" alt="Live Camera Feed" onerror="handleStreamError(this)">
+                </div>
+
+                <div class="action-row">
+                    <button class="btn btn-success" onclick="markLiveAttendance()">
+                        ⚡ Mark Attendance [Liveness Verified]
+                    </button>
+                    <button class="btn btn-purple" onclick="logEngagementSnapshot()">
+                        📸 Log Engagement Snapshot
+                    </button>
+                </div>
+
+                <div id="attendanceAlert" class="alert-box"></div>
+            </div>
+
+            <!-- Real-Time Student Engagement Monitor -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>🧠 Real-Time Student Attention Monitor</h2>
+                    <span id="activeAlertBadge" class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3);">
+                        All Students Attentive
+                    </span>
+                </div>
+                <div id="studentsMonitorList">
+                    <div style="text-align: center; color: var(--text-muted); padding: 14px; font-size: 13px;">
+                        Detecting students in view...
+                    </div>
                 </div>
             </div>
 
-            <div class="video-container">
-                <div class="live-tag">
-                    <div class="live-dot"></div> LIVE
+            <!-- AI Teaching Assistant & Real-Time Interventions Panel -->
+            <div class="card" style="border-color: rgba(99, 102, 241, 0.4);">
+                <div class="card-header">
+                    <h2>🤖 AI Teaching Assistant & Interventions</h2>
+                    <span id="aiModelBadge" class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border-color: rgba(99, 102, 241, 0.3);">
+                        EduVision Pedagogical Engine
+                    </span>
                 </div>
-                <img id="videoStream" src="/camera/stream" alt="Live Camera Feed" onerror="handleStreamError(this)">
-            </div>
 
-            <div class="action-row">
-                <button class="btn btn-success" onclick="markLiveAttendance()">
-                    ⚡ Mark Live Attendance Now
-                </button>
-            </div>
+                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                    <button class="btn btn-purple" onclick="requestAIRecommendation()" id="recBtn" style="flex: 1; padding: 10px 14px; font-size: 13px;">
+                        💡 Request AI Intervention Advice
+                    </button>
+                    <button onclick="fetchAlerts()" style="background: #0f172a; border: 1px solid var(--border); color: #94a3b8; border-radius: 8px; padding: 0 14px; cursor: pointer; font-size: 12px;">
+                        🔄 Refresh
+                    </button>
+                </div>
 
-            <div id="attendanceAlert" class="alert-box"></div>
+                <!-- Recommendation Output Box -->
+                <div id="recommendationContainer" style="display: none;" class="assistant-rec-box">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <strong style="color: #c7d2fe; font-size: 13px;" id="recTitle">Pedagogical Intervention Plan</strong>
+                        <span id="recUrgency" class="status-pill status-high">Optimal</span>
+                    </div>
+                    <p id="recSummary" style="font-size: 12px; color: #cbd5e1; margin-bottom: 10px; line-height: 1.4;"></p>
+                    
+                    <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 6px; border-left: 3px solid #6366f1; margin-bottom: 8px;">
+                        <div style="font-size: 11px; font-weight: 700; color: #a5b4fc; text-transform: uppercase;">⚡ Immediate Action (30s):</div>
+                        <div id="recImmediate" style="font-size: 12px; color: #f1f5f9; margin-top: 4px;"></div>
+                    </div>
+
+                    <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 6px; border-left: 3px solid #10b981; margin-bottom: 8px;">
+                        <div style="font-size: 11px; font-weight: 700; color: #6ee7b7; text-transform: uppercase;">🎯 Interactive Activity (2-3 min):</div>
+                        <div id="recActivity" style="font-size: 12px; color: #f1f5f9; margin-top: 4px;"></div>
+                    </div>
+
+                    <div style="font-size: 11px; color: #94a3b8; font-style: italic; margin-top: 6px;" id="recPacing"></div>
+                </div>
+
+                <!-- Live Pedagogical Alerts List -->
+                <div style="margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">
+                            Active Pedagogical Alerts
+                        </span>
+                        <span id="unreadAlertCount" class="badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.3); font-size: 10px;">
+                            0 Active
+                        </span>
+                    </div>
+                    <div id="alertsFeedList">
+                        <div style="text-align: center; color: var(--text-muted); padding: 10px; font-size: 12px;">
+                            No active pedagogical alerts. Class attention is stable.
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Student Registration & Enrollment -->
+        <!-- Right Column: Student Enrollment & Logs -->
         <div>
-            <div class="card" style="margin-bottom: 24px;">
+            <!-- Student Registration & Enrollment -->
+            <div class="card">
                 <div class="card-header">
                     <h2>👤 Enroll New Student Face</h2>
                 </div>
@@ -406,7 +613,7 @@
             <div class="card">
                 <div class="card-header">
                     <h2>📋 Live Attendance Log</h2>
-                    <button onclick="fetchAttendance()" style="background: transparent; border: none; color: #60a5fa; cursor: pointer; font-size: 13px;">
+                    <button onclick="fetchAttendance()" style="background: transparent; border: none; color: #60a5fa; cursor: pointer; font-size: 12px;">
                         🔄 Refresh
                     </button>
                 </div>
@@ -427,9 +634,183 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Recent Engagement History -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>📈 Recent Engagement Records</h2>
+                    <button onclick="fetchEngagementHistory()" style="background: transparent; border: none; color: #a78bfa; cursor: pointer; font-size: 12px;">
+                        🔄 Refresh
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Score</th>
+                                <th>Gaze</th>
+                                <th>Pose</th>
+                                <th>Flags</th>
+                            </tr>
+                        </thead>
+                        <tbody id="engagementTableBody">
+                            <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No snapshots recorded yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+    </div> <!-- Close viewLiveTab -->
+
+    <!-- Predictive Analytics & Trends View (Phase 6) -->
+    <div id="viewAnalyticsTab" style="display: none;">
+        <!-- Top Institutional Header & Action Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: #1e293b; padding: 14px 18px; border-radius: 10px; border: 1px solid var(--border);">
+            <div>
+                <h2 style="font-size: 16px; font-weight: 700; color: #f8fafc; margin-bottom: 3px;">
+                    🏛️ Department of AI & ML — Student Academic & Behavioral Analytics
+                </h2>
+                <span style="font-size: 12px; color: var(--text-muted);">
+                    Fused computer vision telemetry & scikit-learn machine learning early warning predictions
+                </span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-purple" onclick="seedSampleAnalytics()" style="padding: 8px 14px; font-size: 12px; border-radius: 6px;">
+                    🌱 Seed Sample Semester Data
+                </button>
+                <button class="btn" onclick="retrainMLModel()" style="padding: 8px 14px; font-size: 12px; border-radius: 6px; background: #3b82f6;">
+                    🧠 Retrain ML Model
+                </button>
+                <button onclick="loadAnalyticsDashboard()" style="background: #0f172a; border: 1px solid var(--border); color: #94a3b8; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 12px;">
+                    🔄 Refresh
+                </button>
+            </div>
+        </div>
+
+        <div id="analyticsAlert" class="alert-box"></div>
+
+        <!-- Macro KPI Row -->
+        <div class="stats-grid" style="margin-bottom: 16px;">
+            <div class="stat-box" style="border-color: rgba(99, 102, 241, 0.4);">
+                <div class="stat-number" id="an-stat-cei" style="color: #a5b4fc;">0.0%</div>
+                <div class="stat-label">Semester Mean CEI 📊</div>
+            </div>
+            <div class="stat-box" style="border-color: rgba(16, 185, 129, 0.4);">
+                <div class="stat-number" id="an-stat-att" style="color: #34d399;">0.0%</div>
+                <div class="stat-label">Institutional Attendance Rate</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="an-stat-sessions">0</div>
+                <div class="stat-label">Monitored Lecture Sessions</div>
+            </div>
+            <div class="stat-box" style="border-color: rgba(239, 68, 68, 0.4);">
+                <div class="stat-number" id="an-stat-high-risk" style="color: #f87171;">0</div>
+                <div class="stat-label">Students at High Academic Risk 🚨</div>
+            </div>
+            <div class="stat-box" style="border-color: rgba(245, 158, 11, 0.4);">
+                <div class="stat-number" id="an-stat-mod-risk" style="color: #fbbf24;">0</div>
+                <div class="stat-label">Students at Moderate Risk ⚠️</div>
+            </div>
+        </div>
+
+        <!-- Visual Analytics Charts Row (2 columns) -->
+        <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; margin-bottom: 16px;">
+            <!-- CEI Progression Timeline Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>📈 Class Engagement Index (CEI) Progression Across Lectures</h2>
+                    <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border-color: rgba(99, 102, 241, 0.3);">
+                        Chronological Timeline
+                    </span>
+                </div>
+                <div id="ceiChartContainer" style="padding: 10px 0; min-height: 220px;">
+                    <!-- Rendered dynamically by SVG chart renderer -->
+                </div>
+            </div>
+
+            <!-- Time of Day Circadian Attention Curve -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>⏰ Circadian Attention Curve</h2>
+                    <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3);">
+                        Time-of-Day Pattern
+                    </span>
+                </div>
+                <div id="hourlyCurveContainer" style="padding: 10px 0; min-height: 220px;">
+                    <!-- Rendered dynamically by hourly distribution renderer -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Behavioral Computer Vision Telemetry Breakdown -->
+        <div class="card" style="margin-bottom: 16px;">
+            <div class="card-header">
+                <h2>🧠 Aggregate Behavioral Computer Vision Telemetry Distribution</h2>
+                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3);">
+                    478-Landmark FaceMesh + YOLOv8 Analysis
+                </span>
+            </div>
+            <div class="signals-row" style="grid-template-columns: repeat(4, 1fr); margin-top: 6px;">
+                <div class="signal-badge" style="padding: 14px; background: #0f172a;">
+                    <div class="signal-title" style="font-size: 11px;">👁️ Gaze Focus Ratio</div>
+                    <div class="signal-val" id="an-gaze-center" style="color: #34d399; font-size: 18px; margin: 6px 0;">--%</div>
+                    <div style="font-size: 11px; color: var(--text-muted);" id="an-gaze-sub">Center vs Distracted</div>
+                </div>
+                <div class="signal-badge" style="padding: 14px; background: #0f172a;">
+                    <div class="signal-title" style="font-size: 11px;">🧘 Posture Alignment</div>
+                    <div class="signal-val" id="an-posture-val" style="color: #60a5fa; font-size: 18px; margin: 6px 0;">--%</div>
+                    <div style="font-size: 11px; color: var(--text-muted);" id="an-posture-sub">Forward vs Slouched</div>
+                </div>
+                <div class="signal-badge" style="padding: 14px; background: #0f172a;">
+                    <div class="signal-title" style="font-size: 11px;">📱 Smartphone Distraction Rate</div>
+                    <div class="signal-val" id="an-phone-rate" style="color: #fbbf24; font-size: 18px; margin: 6px 0;">--%</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">In-class phone usage</div>
+                </div>
+                <div class="signal-badge" style="padding: 14px; background: #0f172a;">
+                    <div class="signal-title" style="font-size: 11px;">😴 Drowsiness & Sleepiness</div>
+                    <div class="signal-val" id="an-drowsy-rate" style="color: #f87171; font-size: 18px; margin: 6px 0;">--%</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Micro-sleep frequency</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Machine Learning Disengagement Early Warning Matrix -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2>🚨 Student Academic Disengagement Risk Matrix</h2>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 3px;">
+                        Supervised scikit-learn RandomForest Classifier evaluating multi-session attendance, attention slope, and behavioral telemetry.
+                    </p>
+                </div>
+                <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; border-color: rgba(139, 92, 246, 0.3);">
+                    Predictive Intelligence
+                </span>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 18%;">Student Details</th>
+                            <th style="width: 10%;">Attendance</th>
+                            <th style="width: 10%;">Attentiveness</th>
+                            <th style="width: 14%;">ML Risk Classification</th>
+                            <th style="width: 16%;">Disengagement Risk</th>
+                            <th style="width: 16%;">Contributing Risk Factors</th>
+                            <th style="width: 16%;">Recommended Action Plan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="riskTableBody">
+                        <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 18px;">Computing predictive student risk profiles...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
 <script>
     let reconnectTimer = null;
@@ -438,6 +819,22 @@
         reconnectTimer = setTimeout(() => {
             img.src = '/camera/stream?t=' + new Date().getTime();
         }, 500);
+    }
+
+    async function setOverlayMode(mode) {
+        try {
+            await fetch('/camera/overlay-mode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode: mode })
+            });
+
+            document.getElementById('modeDual').classList.toggle('active', mode === 'dual');
+            document.getElementById('modeEngagement').classList.toggle('active', mode === 'engagement');
+            document.getElementById('modeAttendance').classList.toggle('active', mode === 'attendance');
+        } catch (e) {
+            console.error('Failed to change overlay mode:', e);
+        }
     }
 
     async function fetchStats() {
@@ -453,12 +850,130 @@
         }
     }
 
+    async function fetchLiveEngagement() {
+        try {
+            const res = await fetch('/engagement/live');
+            const data = await res.json();
+            if (data.status !== 'success') return;
+
+            document.getElementById('stat-cei').innerText = data.class_engagement_index.toFixed(1) + '%';
+            
+            const badge = document.getElementById('activeAlertBadge');
+            if (data.active_alerts && data.active_alerts.length > 0) {
+                badge.innerText = '⚠️ ' + data.active_alerts.join(', ');
+                badge.style.background = 'rgba(239, 68, 68, 0.15)';
+                badge.style.color = '#f87171';
+                badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            } else {
+                badge.innerText = 'All Students Attentive';
+                badge.style.background = 'rgba(16, 185, 129, 0.15)';
+                badge.style.color = '#34d399';
+                badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+            }
+
+            const list = document.getElementById('studentsMonitorList');
+            if (!data.students || data.students.length === 0) {
+                list.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 14px; font-size: 13px;">No faces detected in view.</div>';
+                return;
+            }
+
+            list.innerHTML = data.students.map(s => {
+                const barColor = s.score >= 75 ? '#10b981' : (s.score >= 50 ? '#f59e0b' : '#ef4444');
+                return `
+                <div style="background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="font-size: 13px;">${s.name}</strong>
+                        <span class="status-pill ${s.score >= 75 ? 'status-high' : (s.score >= 50 ? 'status-med' : 'status-low')}">
+                            ${s.score}% Attentive [${s.level}]
+                        </span>
+                    </div>
+                    <div class="meter-bar">
+                        <div class="meter-fill" style="width: ${s.score}%; background: ${barColor};"></div>
+                    </div>
+                    <div class="signals-row">
+                        <div class="signal-badge">
+                            <div class="signal-title">Gaze</div>
+                            <div class="signal-val" style="color: ${s.gaze === 'CENTER' ? '#34d399' : '#fbbf24'};">${s.gaze}</div>
+                        </div>
+                        <div class="signal-badge">
+                            <div class="signal-title">Posture</div>
+                            <div class="signal-val" style="color: ${s.posture === 'FORWARD' ? '#34d399' : '#f87171'};">${s.posture}</div>
+                        </div>
+                        <div class="signal-badge">
+                            <div class="signal-title">Blink / Eye</div>
+                            <div class="signal-val" style="color: ${s.is_drowsy ? '#f87171' : '#34d399'};">${s.is_drowsy ? 'DROWSY' : 'Alert'}</div>
+                        </div>
+                        <div class="signal-badge">
+                            <div class="signal-title">Phone</div>
+                            <div class="signal-val" style="color: ${s.phone_detected ? '#f87171' : '#34d399'};">${s.phone_detected ? 'ACTIVE 📱' : 'Clear'}</div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function logEngagementSnapshot() {
+        const alert = document.getElementById('attendanceAlert');
+        alert.style.display = 'block';
+        alert.className = 'alert-box alert-success';
+        alert.innerText = '⏳ Capturing & logging multi-signal engagement snapshot...';
+
+        try {
+            const res = await fetch('/engagement/snapshot', { method: 'POST' });
+            const data = await res.json();
+            if (data.status === 'success') {
+                alert.innerText = `✅ Recorded engagement for ${data.records_logged} student(s)! Class Engagement Index: ${data.class_engagement_index}%`;
+                fetchEngagementHistory();
+                fetchLiveEngagement();
+            } else {
+                alert.className = 'alert-box alert-danger';
+                alert.innerText = `⚠️ ${data.message}`;
+            }
+        } catch (e) {
+            alert.className = 'alert-box alert-danger';
+            alert.innerText = `❌ Error: ${e.message}`;
+        }
+    }
+
+    async function fetchEngagementHistory() {
+        try {
+            const res = await fetch('/engagement/history?limit=15');
+            const records = await res.json();
+            const tbody = document.getElementById('engagementTableBody');
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No snapshots recorded yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = records.map(r => {
+                const flags = [];
+                if (r.phone_detected) flags.push('📱 Phone');
+                if (r.is_drowsy) flags.push('😴 Drowsy');
+                if (r.is_yawning) flags.push('🥱 Yawn');
+                return `
+                <tr>
+                    <td><strong>${r.student_name}</strong></td>
+                    <td><span class="status-pill ${r.attentiveness_score >= 75 ? 'status-high' : 'status-med'}">${r.attentiveness_score}%</span></td>
+                    <td>${r.gaze_score}%</td>
+                    <td>${r.head_pose_score}%</td>
+                    <td>${flags.length > 0 ? flags.join(', ') : 'Normal'}</td>
+                </tr>
+                `;
+            }).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
     async function fetchAttendance() {
         try {
             const res = await fetch('/attendance/');
             const records = await res.json();
             const tbody = document.getElementById('attendanceTableBody');
-            
             if (records.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No attendance marked yet.</td></tr>';
                 return;
@@ -469,7 +984,7 @@
                     <td><strong>${r.student_name}</strong></td>
                     <td>${r.roll_number}</td>
                     <td>${new Date(r.marked_at).toLocaleTimeString()}</td>
-                    <td><span class="status-pill status-present">${(r.confidence * 100).toFixed(1)}%</span></td>
+                    <td><span class="status-pill status-high">${(r.confidence * 100).toFixed(1)}%</span></td>
                 </tr>
             `).join('');
         } catch (e) {
@@ -486,7 +1001,6 @@
         alert.style.display = 'none';
 
         try {
-            // 1. Create student
             const studentData = {
                 name: document.getElementById('studentName').value,
                 roll_number: document.getElementById('studentRoll').value,
@@ -506,23 +1020,17 @@
             }
 
             const student = await createRes.json();
-
-            // 2. Trigger webcam enrollment
-            const enrollRes = await fetch(`/students/${student.id}/enroll-webcam`, {
-                method: 'POST'
-            });
+            const enrollRes = await fetch(`/students/${student.id}/enroll-webcam`, { method: 'POST' });
 
             if (!enrollRes.ok) {
                 const err = await enrollRes.json();
                 throw new Error(err.detail || 'Webcam enrollment failed');
             }
 
-            const enrollData = await enrollRes.json();
             alert.className = 'alert-box alert-success';
             alert.innerText = `✅ Enrolled ${student.name}! Face embeddings encrypted & stored.`;
             alert.style.display = 'block';
 
-            // Reset form
             document.getElementById('studentName').value = '';
             document.getElementById('studentRoll').value = '';
             fetchStats();
@@ -543,7 +1051,7 @@
         alert.style.background = 'rgba(37, 99, 235, 0.2)';
         alert.style.borderColor = 'rgba(37, 99, 235, 0.4)';
         alert.style.color = '#93c5fd';
-        alert.innerText = '🔍 Scanning live video feed & checking liveness...';
+        alert.innerText = '🔍 Scanning live video feed & verifying liveness...';
 
         try {
             const res = await fetch('/attendance/mark-live', { method: 'POST' });
@@ -584,7 +1092,7 @@
             const res = await fetch('/camera/devices');
             const data = await res.json();
             const select = document.getElementById('cameraSelect');
-            const activeIndex = data.status ? data.status.active_index : (data.active_index || 0);
+            const activeIndex = data.status ? data.status.active_index : (data.active_index !== undefined ? data.active_index : 1);
             const lowLight = data.status ? data.status.low_light_boost : (data.low_light_boost || false);
             
             if (data.devices && data.devices.length > 0) {
@@ -610,17 +1118,391 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ index: index, low_light_boost: lowLight })
             });
-            // The active MJPEG connection seamlessly receives the updated frames
+
+            // Smooth stream refresh to reconnect video pipeline
+            const img = document.getElementById('videoStream');
+            if (img) {
+                setTimeout(() => {
+                    img.src = '/camera/stream?t=' + Date.now();
+                }, 150);
+            }
         } catch (e) {
             console.error('Failed to update camera config:', e);
         }
     }
 
-    // Initial load
+    // --- AI Teaching Assistant Functions ---
+    async function fetchAssistantStatus() {
+        try {
+            const res = await fetch('/ai-assistant/status');
+            const data = await res.json();
+            const badge = document.getElementById('aiModelBadge');
+            if (badge) {
+                badge.innerText = data.active_model;
+                if (data.gemini_configured) {
+                    badge.style.background = 'rgba(16, 185, 129, 0.15)';
+                    badge.style.color = '#34d399';
+                    badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                }
+            }
+        } catch (e) {
+            console.error('Failed to fetch assistant status:', e);
+        }
+    }
+
+    async function fetchAlerts() {
+        try {
+            const res = await fetch('/ai-assistant/alerts?limit=10');
+            const data = await res.json();
+            const list = document.getElementById('alertsFeedList');
+            const countBadge = document.getElementById('unreadAlertCount');
+            
+            const alerts = data.alerts || [];
+            const unread = alerts.filter(a => !a.acknowledged);
+            
+            countBadge.innerText = `${unread.length} Active`;
+            countBadge.style.background = unread.length > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+            countBadge.style.color = unread.length > 0 ? '#f87171' : '#34d399';
+            countBadge.style.borderColor = unread.length > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)';
+
+            if (alerts.length === 0) {
+                list.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 10px; font-size: 12px;">No active pedagogical alerts. Class attention is stable.</div>';
+                return;
+            }
+
+            list.innerHTML = alerts.map(a => {
+                const sevClass = a.alert_type.includes('DROP') ? 'critical' : (a.alert_type.includes('PHONE') || a.alert_type.includes('SLEEP') ? 'warning' : 'info');
+                const timeStr = a.timestamp ? new Date(a.timestamp).toLocaleTimeString() : '';
+                return `
+                <div class="alert-card ${sevClass}" style="opacity: ${a.acknowledged ? 0.6 : 1.0};">
+                    <div style="flex: 1;">
+                        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px;">
+                            <span class="status-pill ${sevClass === 'critical' ? 'status-low' : (sevClass === 'warning' ? 'status-med' : 'status-high')}" style="font-size: 10px;">
+                                ${a.alert_type.replace('_', ' ')}
+                            </span>
+                            <span style="font-size: 11px; color: var(--text-muted);">${timeStr}</span>
+                            ${a.acknowledged ? '<span style="font-size: 10px; color: #10b981;">✓ Acknowledged</span>' : ''}
+                        </div>
+                        <div style="font-size: 12px; font-weight: 600; color: #f1f5f9;">${a.message}</div>
+                        ${a.recommendation ? `<div style="font-size: 11px; color: #cbd5e1; margin-top: 3px; font-style: italic;">💡 ${a.recommendation}</div>` : ''}
+                    </div>
+                    ${!a.acknowledged ? `
+                    <button onclick="acknowledgeAlert(${a.id})" style="background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.4); color: #c7d2fe; border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; white-space: nowrap;">
+                        ✓ Dismiss
+                    </button>
+                    ` : ''}
+                </div>
+                `;
+            }).join('');
+        } catch (e) {
+            console.error('Failed to fetch alerts:', e);
+        }
+    }
+
+    async function acknowledgeAlert(alertId) {
+        try {
+            await fetch(`/ai-assistant/alerts/${alertId}/acknowledge`, { method: 'POST' });
+            fetchAlerts();
+        } catch (e) {
+            console.error('Failed to acknowledge alert:', e);
+        }
+    }
+
+    async function requestAIRecommendation() {
+        const btn = document.getElementById('recBtn');
+        const container = document.getElementById('recommendationContainer');
+        btn.disabled = true;
+        btn.innerText = '⏳ Analyzing Attention Telemetry...';
+
+        try {
+            const res = await fetch('/ai-assistant/recommend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subject: "Computer Science & Engineering", duration_minutes: 35 })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                const rec = data.recommendation;
+                container.style.display = 'block';
+                
+                document.getElementById('recTitle').innerText = (rec.immediate_action ? rec.immediate_action.title : 'Pedagogical Recommendation');
+                
+                const urgencyPill = document.getElementById('recUrgency');
+                urgencyPill.innerText = rec.urgency || 'Optimal';
+                urgencyPill.className = `status-pill ${rec.urgency === 'High' ? 'status-low' : (rec.urgency === 'Medium' ? 'status-med' : 'status-high')}`;
+
+                document.getElementById('recSummary').innerText = rec.summary || 'Classroom telemetry evaluated.';
+
+                if (rec.immediate_action) {
+                    const steps = (rec.immediate_action.steps || []).map(s => `<li>${s}</li>`).join('');
+                    document.getElementById('recImmediate').innerHTML = `
+                        <div><strong>Rationale:</strong> ${rec.immediate_action.rationale}</div>
+                        <ul style="margin: 6px 0 0 16px; padding: 0;">${steps}</ul>
+                    `;
+                }
+
+                if (rec.interactive_exercise) {
+                    document.getElementById('recActivity').innerHTML = `
+                        <strong>${rec.interactive_exercise.title}:</strong> ${rec.interactive_exercise.description}
+                    `;
+                }
+
+                if (rec.pacing_advice) {
+                    document.getElementById('recPacing').innerText = '⏱️ Pacing Guidance: ' + rec.pacing_advice;
+                }
+
+                fetchAlerts();
+            }
+        } catch (e) {
+            console.error('Failed to get recommendation:', e);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = '💡 Request AI Intervention Advice';
+        }
+    }
+
+    // --- Phase 6: Analytics & Predictive Intelligence Methods ---
+    function switchNavTab(tab) {
+        const liveView = document.getElementById('viewLiveTab');
+        const analyticsView = document.getElementById('viewAnalyticsTab');
+        const btnLive = document.getElementById('tabBtnLive');
+        const btnAnalytics = document.getElementById('tabBtnAnalytics');
+
+        if (tab === 'analytics') {
+            liveView.style.display = 'none';
+            analyticsView.style.display = 'block';
+            
+            btnAnalytics.style.background = 'var(--primary)';
+            btnAnalytics.style.color = 'white';
+            btnAnalytics.style.border = 'none';
+
+            btnLive.style.background = '#0f172a';
+            btnLive.style.color = 'var(--text-muted)';
+            btnLive.style.border = '1px solid var(--border)';
+
+            loadAnalyticsDashboard();
+        } else {
+            analyticsView.style.display = 'none';
+            liveView.style.display = 'block';
+
+            btnLive.style.background = 'var(--primary)';
+            btnLive.style.color = 'white';
+            btnLive.style.border = 'none';
+
+            btnAnalytics.style.background = '#0f172a';
+            btnAnalytics.style.color = 'var(--text-muted)';
+            btnAnalytics.style.border = '1px solid var(--border)';
+        }
+    }
+
+    async function loadAnalyticsDashboard() {
+        try {
+            // 1. Overview KPIs
+            const ovRes = await fetch('/analytics/overview');
+            const ov = await ovRes.json();
+            document.getElementById('an-stat-cei').innerText = ov.average_class_engagement_index.toFixed(1) + '%';
+            document.getElementById('an-stat-att').innerText = ov.overall_attendance_pct.toFixed(1) + '%';
+            document.getElementById('an-stat-sessions').innerText = ov.total_lecture_sessions;
+            document.getElementById('an-stat-high-risk').innerText = ov.students_at_high_risk;
+            document.getElementById('an-stat-mod-risk').innerText = ov.students_at_moderate_risk;
+
+            // 2. Behavioral Distributions
+            const behRes = await fetch('/analytics/behavioral');
+            const beh = await behRes.json();
+            document.getElementById('an-gaze-center').innerText = beh.gaze_distribution.center_focused + '%';
+            document.getElementById('an-gaze-sub').innerText = `${beh.gaze_distribution.distracted_away}% off-center`;
+            document.getElementById('an-posture-val').innerText = beh.posture_distribution.forward_attentive + '%';
+            document.getElementById('an-phone-rate').innerText = beh.distraction_rates.phone_detected_pct + '%';
+            document.getElementById('an-drowsy-rate').innerText = beh.distraction_rates.drowsiness_sleep_pct + '%';
+
+            // 3. Trends & Charts
+            const trRes = await fetch('/analytics/trends');
+            const tr = await trRes.json();
+            renderCEITrendChart(tr.session_timeline || []);
+            renderCircadianCurve(tr.hourly_distribution || []);
+
+            // 4. ML Student Risk Profiles
+            const rkRes = await fetch('/analytics/students-risk');
+            const rk = await rkRes.json();
+            renderStudentRiskTable(rk.profiles || []);
+        } catch (e) {
+            console.error('Failed to load analytics dashboard:', e);
+        }
+    }
+
+    function renderCEITrendChart(timeline) {
+        const container = document.getElementById('ceiChartContainer');
+        if (!timeline || timeline.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;">No session timeline data.</div>';
+            return;
+        }
+
+        const width = 540;
+        const height = 180;
+        const padX = 40;
+        const padY = 30;
+
+        const points = timeline.map((s, idx) => {
+            const x = padX + (idx / Math.max(1, timeline.length - 1)) * (width - 2 * padX);
+            const val = Math.max(0, Math.min(100, s.cei));
+            const y = height - padY - ((val - 40) / 60) * (height - 2 * padY);
+            return { x, y, val, label: s.date, subject: s.subject };
+        });
+
+        const pathD = points.map((p, idx) => (idx === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(' ');
+        const areaD = `${pathD} L ${points[points.length - 1].x} ${height - padY} L ${points[0].x} ${height - padY} Z`;
+
+        const thresholdY = height - padY - ((70 - 40) / 60) * (height - 2 * padY);
+
+        container.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" style="width: 100%; height: 180px; overflow: visible;">
+            <defs>
+                <linearGradient id="ceiGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#6366f1" stop-opacity="0.35"/>
+                    <stop offset="100%" stop-color="#6366f1" stop-opacity="0.0"/>
+                </linearGradient>
+            </defs>
+
+            <!-- Grid Lines -->
+            <line x1="${padX}" y1="${height - padY}" x2="${width - padX}" y2="${height - padY}" stroke="#334155" stroke-width="1"/>
+            <line x1="${padX}" y1="${padY}" x2="${width - padX}" y2="${padY}" stroke="#334155" stroke-width="1" stroke-dasharray="2 2"/>
+            <line x1="${padX}" y1="${thresholdY}" x2="${width - padX}" y2="${thresholdY}" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="${width - padX + 5}" y="${thresholdY + 4}" fill="#f59e0b" font-size="10">70% Target</text>
+
+            <!-- Area Fill & Stroke -->
+            <path d="${areaD}" fill="url(#ceiGradient)"/>
+            <path d="${pathD}" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round"/>
+
+            <!-- Data Dots -->
+            ${points.map(p => `
+                <circle cx="${p.x}" cy="${p.y}" r="4.5" fill="#a5b4fc" stroke="#1e1b4b" stroke-width="2">
+                    <title>${p.subject}: ${p.val}% (${p.label})</title>
+                </circle>
+                <text x="${p.x}" y="${p.y - 8}" fill="#e2e8f0" font-size="10" font-weight="700" text-anchor="middle">${p.val}%</text>
+                <text x="${p.x}" y="${height - padY + 16}" fill="#94a3b8" font-size="9" text-anchor="middle">${p.label}</text>
+            `).join('')}
+        </svg>
+        `;
+    }
+
+    function renderCircadianCurve(hourly) {
+        const container = document.getElementById('hourlyCurveContainer');
+        if (!hourly || hourly.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;">No hourly curve data.</div>';
+            return;
+        }
+
+        container.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 4px;">
+            ${hourly.map(h => {
+                const color = h.avg_engagement >= 80 ? '#10b981' : (h.avg_engagement >= 70 ? '#f59e0b' : '#ef4444');
+                return `
+                <div>
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;">
+                        <span><strong>${h.hour}</strong> <span style="color: var(--text-muted); font-size: 10px;">(${h.focus_level})</span></span>
+                        <span style="font-weight: 700; color: ${color};">${h.avg_engagement}%</span>
+                    </div>
+                    <div class="meter-bar" style="height: 5px;">
+                        <div class="meter-fill" style="width: ${h.avg_engagement}%; background: ${color};"></div>
+                    </div>
+                </div>
+                `;
+            }).join('')}
+        </div>
+        `;
+    }
+
+    function renderStudentRiskTable(profiles) {
+        const tbody = document.getElementById('riskTableBody');
+        if (!profiles || profiles.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 18px;">No enrolled students found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = profiles.map(p => {
+            const pred = p.prediction;
+            const riskClass = pred.risk_level === 'High Risk' ? 'status-low' : (pred.risk_level === 'Moderate Risk' ? 'status-med' : 'status-high');
+            const barColor = pred.risk_color || '#10b981';
+            const factorsHtml = pred.contributing_factors.map(f => `<span style="display: inline-block; background: #0f172a; border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-size: 10px; margin: 2px 2px 2px 0;">• ${f}</span>`).join('');
+
+            return `
+            <tr>
+                <td>
+                    <strong style="font-size: 13px; color: #f8fafc;">${p.name}</strong>
+                    <div style="font-size: 11px; color: var(--text-muted);">${p.roll_number} • ${p.department} (Sem ${p.semester})</div>
+                </td>
+                <td><strong style="color: ${pred.metrics_summary.attendance_rate < 75 ? '#f87171' : '#34d399'};">${pred.metrics_summary.attendance_rate}%</strong></td>
+                <td><strong>${pred.metrics_summary.avg_attentiveness}%</strong></td>
+                <td>
+                    <span class="status-pill ${riskClass}" style="font-size: 11px; font-weight: 700;">
+                        ${pred.risk_level === 'High Risk' ? '🚨 HIGH RISK' : (pred.risk_level === 'Moderate Risk' ? '⚠️ MODERATE' : '✅ THRIVING')}
+                    </span>
+                </td>
+                <td>
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;">
+                        <span>Failure Likelihood:</span>
+                        <strong style="color: ${barColor};">${pred.risk_score}%</strong>
+                    </div>
+                    <div class="meter-bar">
+                        <div class="meter-fill" style="width: ${pred.risk_score}%; background: ${barColor};"></div>
+                    </div>
+                </td>
+                <td>${factorsHtml}</td>
+                <td style="font-size: 11px; color: #cbd5e1; line-height: 1.35; font-style: italic;">
+                    💡 ${pred.recommended_intervention}
+                </td>
+            </tr>
+            `;
+        }).join('');
+    }
+
+    async function seedSampleAnalytics() {
+        const alert = document.getElementById('analyticsAlert');
+        alert.style.display = 'block';
+        alert.className = 'alert-box alert-success';
+        alert.innerText = '⏳ Seeding historical lecture sessions and student engagement telemetry...';
+
+        try {
+            const res = await fetch('/analytics/seed-sample-data', { method: 'POST' });
+            const data = await res.json();
+            alert.innerText = `✅ Success: Seeded ${data.sessions_seeded} sessions and ${data.engagement_logs_seeded} multi-signal logs!`;
+            loadAnalyticsDashboard();
+            fetchStats();
+        } catch (e) {
+            alert.className = 'alert-box alert-danger';
+            alert.innerText = `❌ Error: ${e.message}`;
+        }
+    }
+
+    async function retrainMLModel() {
+        const alert = document.getElementById('analyticsAlert');
+        alert.style.display = 'block';
+        alert.className = 'alert-box alert-success';
+        alert.innerText = '⏳ Retraining scikit-learn RandomForest Classifier pipeline...';
+
+        try {
+            const res = await fetch('/analytics/retrain', { method: 'POST' });
+            const data = await res.json();
+            alert.innerText = `✅ Model Updated: ${data.message}`;
+            loadAnalyticsDashboard();
+        } catch (e) {
+            alert.className = 'alert-box alert-danger';
+            alert.innerText = `❌ Retrain Error: ${e.message}`;
+        }
+    }
+
+    // Initial load & Polling
     loadCameraDevices();
     fetchStats();
     fetchAttendance();
+    fetchLiveEngagement();
+    fetchEngagementHistory();
+    fetchAssistantStatus();
+    fetchAlerts();
+
     setInterval(fetchAttendance, 10000);
+    setInterval(fetchLiveEngagement, 2000);
+    setInterval(fetchAlerts, 5000);
 </script>
 
 </body>

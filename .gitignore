@@ -42,3 +42,5 @@ models/
 data/embeddings/*.npy
 data/enrolled_faces/*.jpg
 data/enrolled_faces/*.png
+data/image_*.jpg
+

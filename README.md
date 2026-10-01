@@ -272,17 +272,28 @@ The dashboard will open automatically at [http://localhost:3000](http://localhos
 
 | HTTP Method | Endpoint | Description | Tag / Area |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/health` | Service health check and uptime diagnostic | System |
-| `POST` | `/api/v1/enrollment/register` | Register new student biometric face profile & embeddings | Enrollment |
-| `POST` | `/api/v1/attendance/verify` | Perform multi-face recognition & liveness on image frame | Attendance |
-| `GET` | `/api/v1/attendance/records` | Query historical attendance logs with date/class filters | Attendance |
-| `POST` | `/api/v1/engagement/analyze-frame` | Analyze single frame for 6 multimodal engagement metrics | Engagement |
-| `GET` | `/api/v1/engagement/session/{id}`| Retrieve aggregated engagement telemetry for class session | Engagement |
-| `POST` | `/api/v1/assistant/chat` | Send pedagogical query to Gemini AI Teaching Assistant | AI Assistant |
-| `POST` | `/api/v1/assistant/session-summary`| Request Gemini-generated classroom summary and suggestions | AI Assistant |
-| `GET` | `/api/v1/analytics/at-risk` | Predict list of students with declining engagement patterns | Analytics |
-| `WS` | `/ws/live-stream` | Real-time WebSocket stream for video frames & bounding overlays | Streaming |
-| `WS` | `/ws/alerts` | Real-time WebSocket notification channel for teacher alerts | Telemetry |
+| `GET` | `/` | Web Management Portal with Live HUD & Analytics | UI Portal |
+| `GET` | `/health` | Service health check and uptime diagnostic | System |
+| `GET` | `/camera/devices` | Probes and lists active hardware cameras dynamically | Camera |
+| `POST` | `/camera/config` | Switches active camera & toggles low-light boost | Camera |
+| `GET` | `/camera/stream` | Continuous MJPEG stream with normalized 720p HD output | Streaming |
+| `POST` | `/students/` | Register new student profile (name, roll, dept, sem) | Students |
+| `POST` | `/students/{id}/enroll-webcam` | Capture face embeddings via webcam & store encrypted | Enrollment |
+| `POST` | `/attendance/mark-live` | Auto-marks attendance with MiniFASNet-V2 anti-spoofing gating | Attendance |
+| `GET` | `/attendance/stats` | Class attendance totals and spoof attempts thwarted | Attendance |
+| `GET` | `/engagement/live` | Real-time CEI, student scores, gaze, pose, blink, yawn, phone | Engagement |
+| `POST` | `/engagement/snapshot` | Persists multi-signal engagement snapshot to database | Engagement |
+| `GET` | `/engagement/history` | Historical student engagement snapshots log | Engagement |
+| `GET` | `/ai-assistant/status` | Model status (Gemini 1.5 Flash vs Offline Engine) | AI Assistant |
+| `GET` | `/ai-assistant/alerts` | Lists pedagogical alerts with severity pills | AI Assistant |
+| `POST` | `/ai-assistant/alerts/{id}/acknowledge` | Acknowledges / dismisses an active alert | AI Assistant |
+| `POST` | `/ai-assistant/recommend` | Generates structured 30s actions & 2-min interactive plans | AI Assistant |
+| `GET` | `/analytics/overview` | Institutional macro KPIs across all lectures | Analytics |
+| `GET` | `/analytics/trends` | Session CEI timeline and circadian attention curve | Analytics |
+| `GET` | `/analytics/behavioral` | Aggregate gaze, posture, phone, and sleep distributions | Analytics |
+| `GET` | `/analytics/students-risk` | Supervised ML disengagement early warning matrix | Predictive ML |
+| `POST` | `/analytics/retrain` | Retrains scikit-learn RandomForest model | Predictive ML |
+| `POST` | `/analytics/seed-sample-data` | Populates sample historical lecture data for demo | Analytics |
 
 ---
 

@@ -18,7 +18,7 @@ router = APIRouter()
 detector = FaceDetector()
 recognizer = FaceRecognizer()
 enrollment_mgr = EnrollmentManager()
-anti_spoof = AntiSpoofDetector(confidence_threshold=0.60)
+anti_spoof = AntiSpoofDetector(confidence_threshold=0.50)
 
 
 class AttendanceRecordResponse(BaseModel):
