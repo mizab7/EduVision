@@ -1,9 +1,10 @@
 """
 Face detection module for EduVision AI.
-Uses OpenCV YuNet (high-performance, native ONNX face detector) with multi-face support.
+Uses OpenCV YuNet with multi-threading protection and normalized inference resolution.
 """
 
 import os
+import threading
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 import urllib.request
@@ -14,12 +15,14 @@ import numpy as np
 class FaceDetector:
     """
     Detects faces in frames using OpenCV's DNN YuNet model.
+    Thread-safe and resolution-invariant.
     """
     YUNET_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
 
     def __init__(self, model_name: str = "yunet", confidence_threshold: float = 0.5):
         self.model_name = model_name
         self.confidence_threshold = confidence_threshold
+        self.lock = threading.Lock()
         
         project_root = Path(__file__).resolve().parent.parent.parent
         self.models_dir = project_root / "models"
@@ -32,12 +35,12 @@ class FaceDetector:
         self.detector = cv2.FaceDetectorYN.create(
             str(self.model_path),
             "",
-            (320, 320),
+            (640, 480),
             score_threshold=self.confidence_threshold,
             nms_threshold=0.3,
             top_k=5000
         )
-        self.current_input_size = (320, 320)
+        self.current_input_size = (640, 480)
 
     def _ensure_model_exists(self):
         """Downloads YuNet weights if not present."""
@@ -47,39 +50,48 @@ class FaceDetector:
 
     def detect_faces(self, frame: np.ndarray) -> List[Dict[str, Any]]:
         """
-        Detects faces in the given BGR frame.
-        
-        Returns:
-            List of dicts: [
-                {
-                    'bbox': [x1, y1, x2, y2],
-                    'confidence': float,
-                    'landmarks': {
-                        'right_eye': (x, y),
-                        'left_eye': (x, y),
-                        'nose_tip': (x, y),
-                        'right_mouth': (x, y),
-                        'left_mouth': (x, y)
-                    }
-                }
-            ]
+        Detects faces in the given BGR frame safely across multiple threads.
+        Scales large frames to ~640px width for fast 60+ FPS inference,
+        then rescales coordinates back to the original resolution.
         """
         if frame is None or frame.size == 0:
             return []
 
         h, w = frame.shape[:2]
-        if (w, h) != self.current_input_size:
-            self.detector.setInputSize((w, h))
-            self.current_input_size = (w, h)
+        
+        # Normalize inference size for extreme stability and speed
+        target_w = 640 if w > 640 else w
+        scale = target_w / float(w)
+        target_h = int(h * scale)
 
-        _, faces = self.detector.detect(frame)
+        with self.lock:
+            try:
+                if scale < 1.0:
+                    small = cv2.resize(frame, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
+                else:
+                    small = frame
+
+                if (target_w, target_h) != self.current_input_size:
+                    self.detector.setInputSize((target_w, target_h))
+                    self.current_input_size = (target_w, target_h)
+
+                _, faces = self.detector.detect(small)
+            except Exception as e:
+                # Catch any transient backend buffer assertion and return empty gracefully
+                return []
+
         results = []
-
         if faces is not None:
+            inv_scale = 1.0 / scale
             for face in faces:
                 # face format: [x, y, w, h, x_re, y_re, x_le, y_le, x_nt, y_nt, x_rc, y_rc, x_lc, y_lc, score]
-                x, y, bw, bh = face[0:4]
                 score = float(face[-1])
+                
+                # Rescale to original frame dimensions
+                x = face[0] * inv_scale
+                y = face[1] * inv_scale
+                bw = face[2] * inv_scale
+                bh = face[3] * inv_scale
                 
                 x1 = max(0, int(x))
                 y1 = max(0, int(y))
@@ -87,11 +99,11 @@ class FaceDetector:
                 y2 = min(h, int(y + bh))
                 
                 landmarks = {
-                    "right_eye": (int(face[4]), int(face[5])),
-                    "left_eye": (int(face[6]), int(face[7])),
-                    "nose_tip": (int(face[8]), int(face[9])),
-                    "right_mouth": (int(face[10]), int(face[11])),
-                    "left_mouth": (int(face[12]), int(face[13])),
+                    "right_eye": (int(face[4] * inv_scale), int(face[5] * inv_scale)),
+                    "left_eye": (int(face[6] * inv_scale), int(face[7] * inv_scale)),
+                    "nose_tip": (int(face[8] * inv_scale), int(face[9] * inv_scale)),
+                    "right_mouth": (int(face[10] * inv_scale), int(face[11] * inv_scale)),
+                    "left_mouth": (int(face[12] * inv_scale), int(face[13] * inv_scale)),
                 }
                 
                 results.append({

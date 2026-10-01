@@ -23,27 +23,34 @@ camera_worker = CameraWorker.get_instance(default_index=settings.CAMERA_INDEX)
 def generate_camera_frames():
     """Generates continuous MJPEG frames from the background CameraWorker."""
     while True:
-        frame = camera_worker.get_frame()
-        if frame is None:
-            time.sleep(0.04)
-            continue
+        try:
+            frame = camera_worker.get_frame()
+            if frame is None:
+                time.sleep(0.05)
+                continue
 
-        # Run face detection
-        detections = detector.detect_faces(frame)
-        annotated_frame = detector.draw_detections(frame, detections)
+            # Run face detection safely
+            try:
+                detections = detector.detect_faces(frame)
+                annotated_frame = detector.draw_detections(frame, detections)
+            except Exception:
+                annotated_frame = frame
 
-        # Encode frame as JPEG
-        success, buffer = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-        if not success:
-            time.sleep(0.02)
-            continue
+            # Encode frame as JPEG
+            success, buffer = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+            if not success:
+                time.sleep(0.03)
+                continue
 
-        yield (
-            b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n"
-        )
-        # Target ~25-30 FPS stream
-        time.sleep(0.03)
+            yield (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n"
+            )
+            time.sleep(0.03)
+        except GeneratorExit:
+            break
+        except Exception:
+            time.sleep(0.05)
 
 
 @asynccontextmanager
