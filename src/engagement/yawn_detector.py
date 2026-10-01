@@ -1,65 +1,106 @@
 """
-Yawn detection module using Mouth Aspect Ratio (MAR) with MediaPipe 1.0 Tasks API.
+Mouth Aspect Ratio (MAR) and yawn detection module for EduVision AI.
+Detects yawning episodes and tracks fatigue over time using mouth geometric ratios.
 """
 
-import numpy as np
-from typing import Dict, Any, List, Tuple
-from collections import deque
 import time
+from collections import deque
+from typing import Dict, Any, List, Optional
+import numpy as np
+
 
 class YawnDetector:
     """
-    Detects yawns based on mouth aspect ratio.
+    Computes Mouth Aspect Ratio (MAR) and flags yawning fatigue episodes.
     """
-    def __init__(self, mar_threshold: float = 0.6):
+    # Key mouth landmark indices
+    UPPER_LIP = 13
+    LOWER_LIP = 14
+    LEFT_CORNER = 78
+    RIGHT_CORNER = 308
+
+    def __init__(self, mar_threshold: float = 0.55, yawn_duration_threshold: float = 1.0):
         self.mar_threshold = mar_threshold
-        self.yawn_history = deque(maxlen=50)
-        self.is_currently_yawning = False
+        self.yawn_duration_threshold = yawn_duration_threshold
 
-    def calculate_mar(self, mouth_landmarks: List[Tuple[float, float]]) -> float:
-        """Calculates Mouth Aspect Ratio."""
-        if len(mouth_landmarks) < 4:
+        self.yawn_timestamps = deque(maxlen=60)
+        self.is_mouth_open = False
+        self.mouth_open_start_time: Optional[float] = None
+        self.total_yawns = 0
+
+    @staticmethod
+    def calculate_mar(upper: np.ndarray, lower: np.ndarray, left: np.ndarray, right: np.ndarray) -> float:
+        """
+        Calculates Mouth Aspect Ratio: vertical height / horizontal width.
+        """
+        vertical = np.linalg.norm(upper - lower)
+        horizontal = np.linalg.norm(left - right)
+
+        if horizontal < 1e-5:
             return 0.0
-            
-        # For 4 points: 0 is left, 1 is right, 2 is upper, 3 is lower
-        v1 = np.linalg.norm(np.array(mouth_landmarks[2]) - np.array(mouth_landmarks[3]))
-        h = np.linalg.norm(np.array(mouth_landmarks[0]) - np.array(mouth_landmarks[1]))
+
+        return float(vertical / horizontal)
+
+    def detect(self, landmarks: np.ndarray) -> Dict[str, Any]:
+        """
+        Detects yawning from 478 3D facial landmarks.
         
-        if h == 0:
-            return 0.0
-        return v1 / h
+        Args:
+            landmarks: (478, 3) numpy array with landmark coordinates in frame pixels.
+            
+        Returns:
+            Dict containing:
+                - mar: float (mouth aspect ratio)
+                - is_yawning: bool (currently in an active yawn)
+                - yawn_count: int (yawns in the last 15 minutes)
+                - open_duration: float (seconds mouth has been wide open)
+        """
+        now = time.time()
 
-    def detect(self, face_landmarks) -> Dict[str, Any]:
-        """Detects yawns from face_landmarks (list of NormalizedLandmark)."""
-        if not face_landmarks or len(face_landmarks) < 309:
+        if landmarks is None or len(landmarks) < 310:
             return {
-                'mar': 0.0,
-                'is_yawning': False,
-                'yawn_count': 0,
-                'yawn_frequency': 0
+                "mar": 0.15,
+                "is_yawning": False,
+                "yawn_count": 0,
+                "open_duration": 0.0
             }
-            
-        mouth_indices = [78, 308, 13, 14] # left, right, upper, lower
-        mouth_landmarks = [(face_landmarks[i].x, face_landmarks[i].y) for i in mouth_indices]
-        mar = self.calculate_mar(mouth_landmarks)
-        
-        is_yawning = mar > self.mar_threshold
-        
-        if is_yawning and not self.is_currently_yawning:
-            self.yawn_history.append(time.time())
-            
-        self.is_currently_yawning = is_yawning
-        
-        current_time = time.time()
-        recent_yawns = [t for t in self.yawn_history if current_time - t <= 300.0] # 5 mins
-        yawn_count = len(recent_yawns)
-        
-        # Yawns per hour
-        yawn_frequency = yawn_count * 12 
-        
+
+        upper = landmarks[self.UPPER_LIP][:2]
+        lower = landmarks[self.LOWER_LIP][:2]
+        left = landmarks[self.LEFT_CORNER][:2]
+        right = landmarks[self.RIGHT_CORNER][:2]
+
+        mar = self.calculate_mar(upper, lower, left, right)
+        is_wide_open = mar >= self.mar_threshold
+        open_duration = 0.0
+        is_yawn_active = False
+
+        if is_wide_open:
+            if not self.is_mouth_open:
+                self.is_mouth_open = True
+                self.mouth_open_start_time = now
+            open_duration = now - self.mouth_open_start_time
+
+            # If mouth is wide open for at least the threshold, classify as yawning
+            if open_duration >= self.yawn_duration_threshold:
+                is_yawn_active = True
+        else:
+            if self.is_mouth_open:
+                # Mouth just closed: check if the open episode qualified as a completed yawn
+                if self.mouth_open_start_time is not None:
+                    duration = now - self.mouth_open_start_time
+                    if duration >= self.yawn_duration_threshold:
+                        self.total_yawns += 1
+                        self.yawn_timestamps.append(now)
+                self.is_mouth_open = False
+                self.mouth_open_start_time = None
+
+        # Filter yawns within the last 15 minutes
+        recent_yawns = [t for t in self.yawn_timestamps if (now - t) <= 900.0]
+
         return {
-            'mar': mar,
-            'is_yawning': is_yawning,
-            'yawn_count': yawn_count,
-            'yawn_frequency': yawn_frequency
+            "mar": round(mar, 3),
+            "is_yawning": is_yawn_active,
+            "yawn_count": len(recent_yawns),
+            "open_duration": round(open_duration, 2)
         }

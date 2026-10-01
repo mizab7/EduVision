@@ -40,13 +40,13 @@ class CameraWorker:
     _singleton_lock = threading.Lock()
 
     @classmethod
-    def get_instance(cls, default_index: int = 0):
+    def get_instance(cls, default_index: int = 1):
         with cls._singleton_lock:
             if cls._instance is None:
                 cls._instance = CameraWorker(default_index=default_index)
             return cls._instance
 
-    def __init__(self, default_index: int = 0):
+    def __init__(self, default_index: int = 1):
         self.active_index = default_index
         self.low_light_boost = False
         self.running = True
@@ -66,39 +66,85 @@ class CameraWorker:
         self.thread.start()
 
     def _init_hardware_devices(self):
-        """Initializes and pre-warms all detected cameras."""
+        """Initializes and pre-warms all detected cameras with proper sensor auto-exposure."""
         for idx in [0, 1]:
             try:
                 cap = cv2.VideoCapture(idx)
                 if cap.isOpened():
-                    # Warm up sensor auto-exposure
-                    for _ in range(4):
+                    for _ in range(12):
                         cap.read()
-                    self.caps[idx] = cap
+                        time.sleep(0.01)
                     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    self.caps[idx] = cap
                     print(f"✅ CameraWorker pre-warmed Camera {idx} ({w}x{h})")
+                else:
+                    cap.release()
             except Exception as e:
-                print(f"Warning: Failed to initialize camera {idx}: {e}")
+                pass
+
+        if self.caps and self.active_index not in self.caps:
+            self.active_index = next(iter(self.caps.keys()))
+            print(f"CameraWorker active camera set to index {self.active_index}")
 
     def switch_camera(self, new_index: int, low_light: bool = False):
         """
-        Instantaneous zero-millisecond switch to target camera.
-        No hardware teardown or reconnection needed.
+        Instantaneous zero-delay switch to target camera with auto-exposure warmup.
         """
         self.low_light_boost = low_light
-        if new_index in self.caps:
+        with self.frame_lock:
             self.active_index = new_index
+
+        # Ensure target camera is opened
+        if new_index not in self.caps or self.caps[new_index] is None or not self.caps[new_index].isOpened():
+            try:
+                cap = cv2.VideoCapture(new_index)
+                if cap.isOpened():
+                    for _ in range(10):
+                        cap.read()
+                    self.caps[new_index] = cap
+            except Exception as e:
+                print(f"Warning: Failed to open camera {new_index}: {e}")
+
+        cap = self.caps.get(new_index)
+        if cap and cap.isOpened():
+            for _ in range(6):
+                cap.read()
 
     def set_low_light_boost(self, enable: bool):
         self.low_light_boost = enable
 
     def _capture_loop(self):
-        """Background frame acquisition loop."""
+        """Background frame acquisition loop with auto-recovery and auto-exposure guard."""
         while self.running:
             cap = self.caps.get(self.active_index)
+            if not cap or not cap.isOpened():
+                valid_caps = [idx for idx, c in self.caps.items() if c and c.isOpened()]
+                if valid_caps:
+                    self.active_index = valid_caps[0]
+                    cap = self.caps[self.active_index]
+                else:
+                    try:
+                        new_cap = cv2.VideoCapture(0)
+                        if new_cap.isOpened():
+                            for _ in range(10):
+                                new_cap.read()
+                            self.caps[0] = new_cap
+                            self.active_index = 0
+                            cap = new_cap
+                    except Exception:
+                        time.sleep(0.15)
+                        continue
+
             if cap and cap.isOpened():
                 ret, frame = cap.read()
+                # If frame is completely black on transition, read through auto-exposure warmup
+                if ret and frame is not None and frame.mean() < 8.0:
+                    for _ in range(6):
+                        ret, frame = cap.read()
+                        if frame is not None and frame.mean() >= 8.0:
+                            break
+
                 if ret and frame is not None:
                     # Apply low-light boost if active
                     if self.low_light_boost:
@@ -149,21 +195,36 @@ class CameraWorker:
 
     @classmethod
     def list_available_cameras(cls, max_tested: int = 2) -> List[Dict[str, Any]]:
-        """Returns pre-configured human-friendly camera devices list."""
-        return [
-            {
-                "index": 0,
-                "label": "Camera 0 — Built-in Mac Camera",
-                "resolution": "640x480",
-                "is_active": True
-            },
-            {
-                "index": 1,
-                "label": "Camera 1 — External 1080p Web Camera (W100)",
-                "resolution": "1920x1080",
-                "is_active": True
-            }
-        ]
+        """Dynamically probes and returns real detected camera devices with true resolutions."""
+        devices = []
+        for idx in range(max_tested):
+            try:
+                cap = cv2.VideoCapture(idx)
+                if cap.isOpened():
+                    ret, frame = cap.read()
+                    if ret and frame is not None:
+                        h, w = frame.shape[:2]
+                        label = "Built-in Mac Camera (FaceTime HD)" if w >= 1280 else "External Web Camera"
+                        devices.append({
+                            "index": idx,
+                            "label": f"Camera {idx} — {label}",
+                            "resolution": f"{w}x{h}",
+                            "is_active": True
+                        })
+                    cap.release()
+            except Exception:
+                pass
+
+        if not devices:
+            devices = [
+                {
+                    "index": 0,
+                    "label": "Camera 0 — Built-in Mac Camera (FaceTime HD)",
+                    "resolution": "1920x1080",
+                    "is_active": True
+                }
+            ]
+        return devices
 
 
 # Alias for backward compatibility

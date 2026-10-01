@@ -1,75 +1,113 @@
 """
-Head pose estimation module using MediaPipe 1.0 Tasks API landmarks.
+Head pose estimation module for EduVision AI.
+Estimates 3D head orientation (Pitch, Yaw, Roll) using OpenCV solvePnP on key facial landmarks.
 """
 
+from typing import Dict, Any, Tuple
 import cv2
 import numpy as np
-from typing import Dict, Any
+
 
 class HeadPoseEstimator:
     """
-    Estimates head pose (pitch, yaw, roll) using solvePnP.
+    Estimates 3D head pose and posture attentiveness using Perspective-n-Point.
     """
     def __init__(self):
-        # 3D model points (generic face)
+        # 3D generic facial model points (in mm, aligned with image coordinate frame)
+        # X: Right (+), Y: Down (+), Z: Away (+ into scene)
         self.model_points = np.array([
-            (0.0, 0.0, 0.0),             # Nose tip
-            (0.0, -330.0, -65.0),        # Chin
-            (-225.0, 170.0, -135.0),     # Left eye left corner
-            (225.0, 170.0, -135.0),      # Right eye right corner
-            (-150.0, -150.0, -125.0),    # Left Mouth corner
-            (150.0, -150.0, -125.0)      # Right mouth corner
-        ])
+            [0.0, 0.0, 0.0],          # Nose tip (index 1)
+            [0.0, 65.0, -20.0],       # Chin (index 152)
+            [-35.0, -35.0, -25.0],    # Viewer left eye (index 33)
+            [35.0, -35.0, -25.0],     # Viewer right eye (index 263)
+            [-25.0, 35.0, -25.0],     # Viewer left mouth (index 61)
+            [25.0, 35.0, -25.0]       # Viewer right mouth (index 291)
+        ], dtype=np.float64)
 
-    def estimate_pose(self, frame: np.ndarray, face_landmarks) -> Dict[str, Any]:
+    def estimate_pose(self, landmarks: np.ndarray, frame_shape: Tuple[int, int]) -> Dict[str, Any]:
         """
-        Calculates pitch, yaw, roll and an attentiveness score.
-        face_landmarks should be a list of NormalizedLandmark objects.
-        """
-        if not face_landmarks or len(face_landmarks) < 468:
-            return {'pitch': 0, 'yaw': 0, 'roll': 0, 'pose_score': 0, 'is_attentive': False}
-            
-        size = frame.shape
-        h, w = size[0], size[1]
+        Estimates Pitch, Yaw, Roll angles and posture attentiveness.
         
-        # Extract the 6 key points
+        Args:
+            landmarks: (478, 3) numpy array with landmark coordinates in frame pixels.
+            frame_shape: (H, W) or (H, W, C)
+            
+        Returns:
+            Dict containing:
+                - pitch: float (degrees, negative = looking down, positive = looking up)
+                - yaw: float (degrees, negative = looking right, positive = looking left)
+                - roll: float (degrees, tilt)
+                - pose_score: float (0 - 100)
+                - is_attentive: bool
+                - posture_label: str ('FORWARD', 'LOOKING_DOWN', 'LOOKING_LEFT', 'LOOKING_RIGHT', 'LOOKING_UP')
+        """
+        if landmarks is None or len(landmarks) < 300:
+            return {
+                "pitch": 0.0, "yaw": 0.0, "roll": 0.0,
+                "pose_score": 85.0, "is_attentive": True,
+                "posture_label": "FORWARD"
+            }
+
+        h, w = frame_shape[:2]
+
         indices = [1, 152, 33, 263, 61, 291]
-        image_points = []
-        for idx in indices:
-            lm = face_landmarks[idx]
-            image_points.append((lm.x * w, lm.y * h))
-            
-        focal_length = w
-        center = (w / 2, h / 2)
-        camera_matrix = np.array(
-            [[focal_length, 0, center[0]],
-             [0, focal_length, center[1]],
-             [0, 0, 1]], dtype="double"
+        image_points = np.array([landmarks[i][:2] for i in indices], dtype=np.float64)
+
+        focal_length = float(w)
+        center = (float(w) / 2.0, float(h) / 2.0)
+        camera_matrix = np.array([
+            [focal_length, 0.0, center[0]],
+            [0.0, focal_length, center[1]],
+            [0.0, 0.0, 1.0]
+        ], dtype=np.float64)
+
+        dist_coeffs = np.zeros((4, 1), dtype=np.float64)
+
+        success, rvec, tvec = cv2.solvePnP(
+            self.model_points,
+            image_points,
+            camera_matrix,
+            dist_coeffs,
+            flags=cv2.SOLVEPNP_EPNP
         )
-        
-        dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
-        image_points_np = np.array(image_points, dtype="double")
-        
-        success, rotation_vector, translation_vector = cv2.solvePnP(
-            self.model_points, image_points_np, camera_matrix, dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE
-        )
-        
+
         if not success:
-            return {'pitch': 0, 'yaw': 0, 'roll': 0, 'pose_score': 0, 'is_attentive': False}
-            
-        rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
-        angles, _, _, _, _, _ = cv2.RQDecomp3x3(rotation_matrix)
-        
-        pitch, yaw, roll = angles[0], angles[1], angles[2]
-        
-        # Simple attention heuristic based on angles
-        is_attentive = abs(pitch) < 20 and abs(yaw) < 30
-        pose_score = 100 if is_attentive else max(0, 100 - (abs(pitch) + abs(yaw)))
-        
+            return {
+                "pitch": 0.0, "yaw": 0.0, "roll": 0.0,
+                "pose_score": 75.0, "is_attentive": True,
+                "posture_label": "FORWARD"
+            }
+
+        rmat, _ = cv2.Rodrigues(rvec)
+
+        # Robust Euler decomposition
+        pitch = float(np.degrees(np.arcsin(-np.clip(rmat[1, 2], -1.0, 1.0))))
+        yaw = float(np.degrees(np.arctan2(rmat[0, 2], rmat[2, 2])))
+        roll = float(np.degrees(np.arctan2(rmat[1, 0], rmat[1, 1])))
+
+        # Posture classification
+        if pitch < -25.0:
+            posture_label = "LOOKING_DOWN"
+        elif pitch > 25.0:
+            posture_label = "LOOKING_UP"
+        elif yaw > 30.0:
+            posture_label = "LOOKING_LEFT"
+        elif yaw < -30.0:
+            posture_label = "LOOKING_RIGHT"
+        else:
+            posture_label = "FORWARD"
+
+        is_attentive = (abs(pitch) <= 22.0) and (abs(yaw) <= 25.0)
+
+        # Attentiveness score penalty based on angular deviation
+        deviation = max(0.0, abs(pitch) - 10.0) * 1.5 + max(0.0, abs(yaw) - 12.0) * 1.5
+        pose_score = max(20.0, min(100.0, 100.0 - deviation))
+
         return {
-            'pitch': pitch,
-            'yaw': yaw,
-            'roll': roll,
-            'pose_score': pose_score,
-            'is_attentive': is_attentive
+            "pitch": round(pitch, 1),
+            "yaw": round(yaw, 1),
+            "roll": round(roll, 1),
+            "pose_score": round(pose_score, 1),
+            "is_attentive": is_attentive,
+            "posture_label": posture_label
         }

@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./eduvision.db"
     SECRET_KEY: str = "default_secret_key_for_dev_only"
     GEMINI_API_KEY: str | None = None
-    CAMERA_INDEX: int = 0
+    CAMERA_INDEX: int = 1
     FACE_RECOGNITION_THRESHOLD: float = 0.6
     ENGAGEMENT_DROP_THRESHOLD: float = 40.0
     FPS_TARGET: int = 15
