@@ -1,6 +1,17 @@
 import os
+import sys
 import time
 from pathlib import Path
+
+# Ensure project root is in sys.path and PYTHONPATH so imports work from anywhere
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+if "PYTHONPATH" not in os.environ:
+    os.environ["PYTHONPATH"] = str(ROOT_DIR)
+elif str(ROOT_DIR) not in os.environ["PYTHONPATH"].split(os.pathsep):
+    os.environ["PYTHONPATH"] = f"{ROOT_DIR}{os.pathsep}{os.environ['PYTHONPATH']}"
+
 from contextlib import asynccontextmanager
 import cv2
 import uvicorn
@@ -150,9 +161,15 @@ app.include_router(analytics.router, prefix="/analytics", tags=["Analytics & Pre
 
 @app.get("/", tags=["UI"])
 def serve_portal():
-    """Serves the interactive EduVision AI web management portal."""
     portal_path = Path(__file__).resolve().parent / "static" / "index.html"
-    return FileResponse(str(portal_path))
+    return FileResponse(
+        str(portal_path),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
 
 
 @app.get("/health", tags=["Health"])
@@ -230,4 +247,4 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 if __name__ == "__main__":
-    uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=True, app_dir=str(ROOT_DIR))

@@ -155,11 +155,19 @@ def enroll_student_webcam(student_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/{student_id}")
-def delete_student(student_id: int, db: Session = Depends(get_db)):
-    """Soft delete a student."""
+def delete_student(student_id: int, hard_delete: bool = False, db: Session = Depends(get_db)):
+    """Deactivates/soft deletes (or permanently deletes) a student from the active roster."""
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found.")
+    
+    student_name = student.name
+    if hard_delete:
+        db.query(FaceEmbedding).filter(FaceEmbedding.student_id == student_id).delete()
+        db.delete(student)
+        db.commit()
+        return {"status": "success", "message": f"Student '{student_name}' permanently deleted."}
+
     student.is_active = False
     db.commit()
-    return {"message": "Student soft deleted successfully"}
+    return {"status": "success", "message": f"Student '{student_name}' removed from active roster."}

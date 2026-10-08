@@ -107,7 +107,7 @@ class EnrollmentManager:
 
         known = {}
         try:
-            records = db.query(FaceEmbedding).all()
+            records = db.query(FaceEmbedding).join(Student, FaceEmbedding.student_id == Student.id).filter(Student.is_active == True).all()
             for rec in records:
                 try:
                     decrypted = self.crypto.decrypt_embedding(rec.embedding_data, shape=(128,))

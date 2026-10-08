@@ -39,8 +39,10 @@ venv/
 # Models & Data
 models/
 *.sqlite3
-data/embeddings/*.npy
-data/enrolled_faces/*.jpg
-data/enrolled_faces/*.png
-data/image_*.jpg
+data/*.jpg
+data/*.png
+data/embeddings/*
+!data/embeddings/.gitkeep
+data/enrolled_faces/*
+!data/enrolled_faces/.gitkeep
 
